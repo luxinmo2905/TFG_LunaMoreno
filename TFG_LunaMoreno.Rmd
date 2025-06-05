@@ -1,0 +1,808 @@
+---
+title: "TFG"
+author: "Luna Moreno"
+date: "2025-05-27"
+output: pdf_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+```{r, include=FALSE}
+library(rjags)
+library(R2jags)
+library(ggplot2)
+library(dplyr)
+library(BAS)
+library(reshape2)
+library(mice)
+library(openxlsx)
+library(coda)
+library(purrr)
+library(readxl)
+library(runjags)
+source("DBDA2E-utilities.R" )
+```
+```{r, include=FALSE}
+###----Lectura de datos----
+
+consolidated_df3 <- read.csv("data_latentes/results/consolidated_df_3.csv")
+
+#------Imputación de datos----- 
+# Realizar la imputación
+imputed_data <- mice(consolidated_df3, m = 5, method = 'pmm', seed = 500)
+
+df <- complete(imputed_data, 1)
+
+#Nos quedamos con las entradas que estén completas
+df <- consolidated_df3[complete.cases(consolidated_df3),]
+
+#Identificamos las entradas como mutadas y no mutadas
+df$Mutation2 <- factor(df$Mutation, labels = c("No mutation", "Mutation"))
+
+#Identificamos si no hay presencia del gen apoe4, si hay un alelo, o si son los dos
+df$apoe2[df$apoe==22] <- "no4"
+df$apoe2[df$apoe==23] <- "no4"
+df$apoe2[df$apoe==24] <- "4"
+df$apoe2[df$apoe==33] <- "no4"
+df$apoe2[df$apoe==34] <- "4"
+df$apoe2[df$apoe==44] <- "44"
+df$apoe2<- factor(df$apoe2, levels = c("no4","4","44"))
+df$Mutationtype2 <- factor(df$MUTATIONTYPE*df$Mutation, labels = c("non_carriers","presenil1", "presenil2","app"))
+```
+## MODELO BASE 3 LATENTES
+
+```{r, include=FALSE}
+fit <- lm(mri_z_mu_1 ~ Mutationtype2 * (DIAN_EYO + gender+ cdrglob)+ apoe2 + COG_executive + COG_global, data=df, x = TRUE)
+
+#------ para JAGS------
+N <- dim(df)[1]
+X <- as.matrix(cbind(model.matrix(fit))) 
+ind <- as.numeric(as.factor((df$id))) 
+ind
+I <-length(unique(df$id))
+p <- dim(X)[2]
+forJags <- list(X=X,  # predictors
+                x=df$mri_z_mu_0,  # DV
+                y=df$mri_z_mu_1,
+                z=df$mri_z_mu_2,
+                ind = ind, #Identificador
+                I = I, #Nº individuos 
+                N=N,  # sample size
+                mu.beta=rep(0,p),  # priors centered on 0
+                tau.beta=diag(.0001,p)) 
+
+#-----compilación a JAGS------
+modelstring="
+  model {
+    for (i in 1:N) {
+      x[i]~dnorm(mux[i],tau)
+      mux[i] <- inprod(betax[],X[i,]) + b[ind[i]]
+      y[i]~dnorm(muy[i],tau)
+      muy[i] <- inprod(betay[],X[i,]) + alphay*b[ind[i]]
+      z[i]~dnorm(muz[i],tau)
+      muz[i] <- inprod(betaz[],X[i,]) + alphaz*b[ind[i]]
+    }
+    for(j in 1:I){
+  b[j] ~ dnorm(0,tau.b)
+  #by[j] ~ dnorm(0,tau.by)
+  #bz[j] ~ dnorm(0,tau.bz)
+  }
+  betax ~ dmnorm(mu.beta,tau.beta)
+  betay ~ dmnorm(mu.beta,tau.beta)
+  betaz ~ dmnorm(mu.beta,tau.beta)
+  tau  <- 1/(sig*sig)
+  
+  sig~ dunif(0,100)  
+  
+  tau.b <- 1/(sigb*sigb)
+  sigb~ dunif(0,100)
+  alphay~dnorm(0,0.0001)
+  alphaz~dnorm(0,0.0001)
+  }
+"
+tmpf=tempfile()
+tmps=file(tmpf,"w")
+cat(modelstring,file=tmps)
+close(tmps)
+model=jags.model(tmpf,data=forJags,n.chains = 3,n.adapt = 1e5)
+update(model,n.iter=100000)
+
+output=coda.samples(model=model,variable.names=c("betax", "betaz","betay","sig","sigb","alphay","alphaz"), n.iter=100000, thin=10)
+
+resumen <- (summary(output))
+resumen
+
+dic_output <- dic.samples(model, n.iter = 10000, thin = 10)
+dic_val <- sum(dic_output$deviance) + sum(dic_output$penalty)
+dic_val
+
+# modelo_descripcion <- deparse(fit$call$formula)
+# 
+# dic_resultado <- data.frame(
+#   Modelo = modelo_descripcion,
+#   DIC = round(dic_val, 3) 
+# )
+
+#archivo <- "ResultadosLuna/resultados_modelos_DIC_3.xlsx"
+
+# if (file.exists(archivo)) {
+#   hoja_existente <- read.xlsx(archivo)
+#   names(hoja_existente) <- names(dic_resultado)
+#   hoja_nueva <- rbind(hoja_existente, dic_resultado)
+# } else {
+#   hoja_nueva <- dic_resultado
+# }
+
+#write.xlsx(hoja_nueva, file = archivo, overwrite = TRUE)
+```
+
+
+## MODELO MODIFICADO 3 LATENTES 
+
+```{r}
+fit <-glm(mri_z_mu_1 ~ Mutationtype2 + DIAN_EYO + apoe2 + gender + CDRSUM, data=df)
+
+#------ para JAGS------
+N <- dim(df)[1]
+X <- as.matrix(cbind(model.matrix(fit))) 
+ind <- as.numeric(as.factor((df$id))) 
+ind
+I <-length(unique(df$id))
+p <- dim(X)[2]
+forJags <- list(X=X,  # predictors
+                x=df$mri_z_mu_0,  # DV
+                y=df$mri_z_mu_1,
+                z=df$mri_z_mu_2,
+                ind = ind, #Identificador
+                I = I, #Nº individuos 
+                N=N,  # sample size
+                mu.x1=rep(0,p), 
+                mu.x2=rep(0,p),
+                mu.x3=rep(0,p),
+                tau.x1 = diag(.0001,p),
+                tau.x2 = diag(.0001,p),
+                tau.x3 = diag(.0001,p))
+
+#-----compilación a JAGS------
+modelstring="
+  model {
+    for (i in 1:N) {
+      x[i]~dnorm(mux[i],taux1)
+      mux[i] <- inprod(betax[],X[i,]) + bx1[ind[i]]
+      y[i]~dnorm(muy[i],taux2)
+      muy[i] <- inprod(betay[],X[i,]) + alphay*bx2[ind[i]]
+      z[i]~dnorm(muz[i],taux3)
+      muz[i] <- inprod(betaz[],X[i,]) + alphaz*bx3[ind[i]]
+    }
+    for(j in 1:I){
+  bx1[j] ~ dnorm(0,tau.bx1)
+  bx2[j] ~ dnorm(0,tau.bx2)
+  bx3[j] ~ dnorm(0,tau.bx3)
+  }
+  betax ~ dmnorm(mu.x1,tau.x1)
+  betay ~ dmnorm(mu.x2,tau.x2)
+  betaz ~ dmnorm(mu.x3,tau.x3)
+  
+  taux1  <- 1/(sigx1*sigx1)
+  taux2  <- 1/(sigx2*sigx2)
+  taux3  <- 1/(sigx3*sigx3)
+  
+  sigx1~ dunif(0,100)  
+  sigx2~ dunif(0,100)
+  sigx3~ dunif(0,100)
+  
+  tau.bx1  <- 1/(sigbx*sigbx)
+  tau.bx2  <- 1/(sigby*sigby)
+  tau.bx3  <- 1/(sigbz*sigbz)
+  sigbx~ dunif(0,100)
+  sigby~ dunif(0,100)
+  sigbz~ dunif(0,100)
+  alphay~dnorm(0,0.0001)
+  alphaz~dnorm(0,0.0001)
+  }
+"
+tmpf=tempfile()
+tmps=file(tmpf,"w")
+cat(modelstring,file=tmps)
+close(tmps)
+model=jags.model(tmpf,data=forJags,n.chains = 3,n.adapt = 1e5)
+update(model,n.iter=100000)
+
+output=coda.samples(model=model,variable.names=c("betax", "betaz","betay","sigbx","sigby","sigbz","alphay","alphaz"), n.iter=100000, thin=10)
+
+dic_output <- dic.samples(model, n.iter = 10000, thin = 10)
+dic_val <- sum(dic_output$deviance) + sum(dic_output$penalty)
+dic_val
+
+# Guardar en Excel
+ modelo_descripcion <- deparse(fit$call$formula)
+
+ dic_resultado <- data.frame(
+   Modelo = modelo_descripcion,
+   DIC = round(dic_val, 3)
+ )
+
+
+archivo <- "ResultadosLuna/resultados_modelos_DIC_3mod.xlsx"
+ 
+if (file.exists(archivo)) {
+   hoja_existente <- tryCatch(
+     read.xlsx(archivo),
+     error = function(e) NULL
+   )
+   if (!is.null(hoja_existente)) {
+     names(hoja_existente) <- names(dic_resultado)
+     hoja_nueva <- rbind(hoja_existente, dic_resultado)
+   } else {
+     hoja_nueva <- dic_resultado
+   }
+ } else {
+   hoja_nueva <- dic_resultado
+ }
+
+
+ #write.xlsx(hoja_nueva, file = archivo, overwrite = TRUE)
+```
+## Gráficas mejor modelo
+
+```{r}
+colnames(X)
+```
+
+###Variable Mutationtype2presenil1
+
+```{r}
+#png("ImagenesTFG/betax2.png", width = 800, height = 600)
+diagMCMC(output, "betax[2]") 
+#dev.off()
+#png("ImagenesTFG/betay2.png", width = 800, height = 600)
+diagMCMC(output, "betay[2]") 
+#dev.off()
+#png("ImagenesTFG/betaz2.png", width = 800, height = 600)
+diagMCMC(output, "betaz[2]") 
+#dev.off()
+```
+
+
+### Variable Mutationtype2presenil2
+```{r}
+#png("ImagenesTFG/betax3.png", width = 800, height = 600)
+diagMCMC(output, "betax[3]") 
+#dev.off()
+#png("ImagenesTFG/betay3.png", width = 800, height = 600)
+diagMCMC(output, "betay[3]") 
+#dev.off()
+#png("ImagenesTFG/betaz3.png", width = 800, height = 600)
+diagMCMC(output, "betaz[3]") 
+#dev.off()
+```
+
+
+###Variable Mutationtype2app
+```{r}
+#png("ImagenesTFG/betax4.png", width = 800, height = 600)
+diagMCMC(output, "betax[4]") 
+#dev.off()
+#png("ImagenesTFG/betay4.png", width = 800, height = 600)
+diagMCMC(output, "betay[4]") 
+#dev.off()
+#png("ImagenesTFG/betaz4.png", width = 800, height = 600)
+diagMCMC(output, "betaz[4]") 
+#dev.off()
+```
+
+
+### Variable apoe244
+```{r}
+#png("ImagenesTFG/betax6.png", width = 800, height = 600)
+diagMCMC(output, "betax[6]") 
+#dev.off()
+#png("ImagenesTFG/betay6.png", width = 800, height = 600)
+diagMCMC(output, "betay[6]") 
+#dev.off()
+#png("ImagenesTFG/betaz6.png", width = 800, height = 600)
+diagMCMC(output, "betaz[6]") 
+#dev.off()
+```
+
+
+### Variable apoe244
+```{r}
+#png("ImagenesTFG/betax7.png", width = 800, height = 600)
+diagMCMC(output, "betax[7]") 
+#dev.off()
+#png("ImagenesTFG/betay7.png", width = 800, height = 600)
+diagMCMC(output, "betay[7]") 
+#dev.off()
+#png("ImagenesTFG/betaz7.png", width = 800, height = 600)
+diagMCMC(output, "betaz[7]") 
+#dev.off()
+```
+
+### Intercept
+```{r}
+diagMCMC(output, "betax[1]") 
+diagMCMC(output, "betay[1]") 
+diagMCMC(output, "betaz[1]")
+```
+
+### Variable DIAN_EYO
+```{r}
+diagMCMC(output, "betax[5]") 
+diagMCMC(output, "betay[5]")
+diagMCMC(output, "betaz[5]")
+```
+
+### Variable gender
+```{r}
+diagMCMC(output, "betax[8]") 
+diagMCMC(output, "betay[8]")
+diagMCMC(output, "betaz[8]")
+```
+### Variable CDRSUM
+```{r}
+diagMCMC(output, "betax[9]")
+diagMCMC(output, "betay[9]")
+diagMCMC(output, "betaz[9]")
+```
+
+```{r}
+diagMCMC(output, "sigbx") 
+diagMCMC(output, "sigby") 
+diagMCMC(output, "sigbz") 
+diagMCMC(output, "alphay")
+diagMCMC(output, "alphaz")
+
+save(output, file = "latent2.rda")
+
+```
+
+# VALIDACIÓN CRUZADA MODELO BASE 3 LAT
+
+```{r}
+set.seed(123)
+
+# Preparar folds por id
+subject_ids <- unique(df$id)
+K <- 5
+folds <- cut(seq_along(subject_ids), breaks = K, labels = FALSE)
+shuffled_ids <- sample(subject_ids)
+fold_assignments <- split(shuffled_ids, folds)
+
+cv_results <- list()
+
+for (k in 1:K) {
+  cat("Fold", k, "\n")
+  
+  test_ids <- fold_assignments[[k]]
+  train_df <- df %>% filter(!id %in% test_ids)
+  test_df  <- df %>% filter(id %in% test_ids)
+  
+  fit_train <- glm(mri_z_mu_1 ~ Mutationtype2 * (DIAN_EYO + gender) + cdrglob + COG_executive + COG_global + apoe2, data = train_df, x = TRUE)
+  
+  X_train <- as.matrix(model.matrix(fit_train))
+  X_test <- model.matrix(formula(fit_train), data = test_df)
+
+  
+  N_train <- nrow(train_df)
+  I_train <- length(unique(train_df$id))
+  ind_train <- as.numeric(as.factor(train_df$id))
+  
+  jags_data <- list(
+    X = X_train,
+    x = train_df$mri_z_mu_0,
+    y = train_df$mri_z_mu_1,
+    z = train_df$mri_z_mu_2,
+    ind = ind_train,
+    I = I_train,
+    N = N_train,
+    mu.beta = rep(0, ncol(X_train)),
+    tau.beta = diag(0.0001, ncol(X_train))
+  )
+  
+  modelstring="
+  model {
+    for (i in 1:N) {
+      x[i]~dnorm(mux[i],tau)
+      mux[i] <- inprod(betax[],X[i,]) + b[ind[i]]
+      y[i]~dnorm(muy[i],tau)
+      muy[i] <- inprod(betay[],X[i,]) + alphay*b[ind[i]]
+      z[i]~dnorm(muz[i],tau)
+      muz[i] <- inprod(betaz[],X[i,]) + alphaz*b[ind[i]]
+    }
+    for(j in 1:I){
+  b[j] ~ dnorm(0,tau.b)
+  #by[j] ~ dnorm(0,tau.by)
+  #bz[j] ~ dnorm(0,tau.bz)
+  }
+  betax ~ dmnorm(mu.beta,tau.beta)
+  betay ~ dmnorm(mu.beta,tau.beta)
+  betaz ~ dmnorm(mu.beta,tau.beta)
+  tau  <- 1/(sig*sig)
+  
+  sig~ dunif(0,100)  
+  
+  tau.b <- 1/(sigb*sigb)
+  sigb~ dunif(0,100)
+  alphay~dnorm(0,0.0001)
+  alphaz~dnorm(0,0.0001)
+  }
+"
+  
+  jags_fit <- run.jags(model = modelstring,
+                       data = jags_data,
+                       monitor = c("betax", "betay", "betaz"),
+                       n.chains = 3, burnin = 1000, sample = 2000, adapt = 1000,
+                       summarise = FALSE, method = "rjags")
+  
+  samples <- as.matrix(as.mcmc(jags_fit))
+  betax_mean <- colMeans(samples[, grepl("betax", colnames(samples))])
+  
+  mux_test <- X_test %*% betax_mean
+  mse <- mean((test_df$mri_z_mu_0 - mux_test)^2)
+
+  cv_results[[k]] <- list(mse = mse)
+}
+
+# Calcular promedio de MSE en CV
+mse_vals <- map_dbl(cv_results, "mse")
+cat("MSE en validación cruzada (promedio):", mean(mse_vals), "\n")
+
+# Entrenar en todo el dataset y calcular mse_all
+fit_all <- lm(mri_z_mu_1 ~ Mutationtype2 * (DIAN_EYO + gender) + cdrglob + COG_executive + COG_global + apoe2, data = df, x = TRUE)
+X_all <- model.matrix(fit_all)
+N_all <- nrow(df)
+I_all <- length(unique(df$id))
+ind_all <- as.numeric(as.factor(df$id))
+
+jags_data_all <- list(
+  X = X_all,
+  x = df$mri_z_mu_0,
+  y = df$mri_z_mu_1,
+  z = df$mri_z_mu_2,
+  ind = ind_all,
+  I = I_all,
+  N = N_all,
+  mu.beta = rep(0, ncol(X_all)),
+  tau.beta = diag(0.0001, ncol(X_all))
+)
+
+jags_fit_all <- run.jags(model = modelstring,
+                         data = jags_data_all,
+                         monitor = c("betax"),
+                         n.chains = 3, burnin = 1000, sample = 2000, adapt = 1000,
+                         summarise = FALSE, method = "rjags")
+
+samples_all <- as.matrix(as.mcmc(jags_fit_all))
+betax_mean_all <- colMeans(samples_all[, grepl("betax", colnames(samples_all))])
+mux_all <- X_all %*% betax_mean_all
+mse_all <- mean((df$mri_z_mu_0 - mux_all)^2)
+
+cat("MSE en todo el conjunto (entrenamiento):", mse_all, "\n")
+```
+# VALIDACIÓN CRUZADA MODELO MODIFICADO 3 LATENTES
+```{r}
+set.seed(123)
+
+# Preparar folds por id
+subject_ids <- unique(df$id)
+K <- 5
+folds <- cut(seq_along(subject_ids), breaks = K, labels = FALSE)
+shuffled_ids <- sample(subject_ids)
+fold_assignments <- split(shuffled_ids, folds)
+
+cv_results <- list()
+
+for (k in 1:K) {
+  cat("Fold", k, "\n")
+  
+  test_ids <- fold_assignments[[k]]
+  train_df <- df %>% filter(!id %in% test_ids)
+  test_df  <- df %>% filter(id %in% test_ids)
+  
+  fit_train <- glm(mri_z_mu_1 ~ Mutationtype2 + DIAN_EYO + apoe2 + gender + CDRSUM, data = train_df, x = TRUE)
+  
+  X_train <- as.matrix(model.matrix(fit_train))
+  X_test <- model.matrix(formula(fit_train), data = test_df)
+
+  
+  N_train <- nrow(train_df)
+  I_train <- length(unique(train_df$id))
+  ind_train <- as.numeric(as.factor(train_df$id))
+  
+  jags_data <- list(
+  X = X_train,
+  x = train_df$mri_z_mu_0,
+  y = train_df$mri_z_mu_1,
+  z = train_df$mri_z_mu_2,
+  ind = ind_train,
+  I = I_train,
+  N = N_train,
+  mu.x1 = rep(0, ncol(X_train)),
+  mu.x2 = rep(0, ncol(X_train)),
+  mu.x3 = rep(0, ncol(X_train)),
+  tau.x1 = diag(0.0001, ncol(X_train)),
+  tau.x2 = diag(0.0001, ncol(X_train)),
+  tau.x3 = diag(0.0001, ncol(X_train))
+)
+
+ modelstring="
+  model {
+    for (i in 1:N) {
+      x[i]~dnorm(mux[i],taux1)
+      mux[i] <- inprod(betax[],X[i,]) + bx1[ind[i]]
+      y[i]~dnorm(muy[i],taux2)
+      muy[i] <- inprod(betay[],X[i,]) + alphay*bx2[ind[i]]
+      z[i]~dnorm(muz[i],taux3)
+      muz[i] <- inprod(betaz[],X[i,]) + alphaz*bx3[ind[i]]
+    }
+    for(j in 1:I){
+  bx1[j] ~ dnorm(0,tau.bx1)
+  bx2[j] ~ dnorm(0,tau.bx2)
+  bx3[j] ~ dnorm(0,tau.bx3)
+  }
+  betax ~ dmnorm(mu.x1,tau.x1)
+  betay ~ dmnorm(mu.x2,tau.x2)
+  betaz ~ dmnorm(mu.x3,tau.x3)
+  
+  taux1  <- 1/(sigx1*sigx1)
+  taux2  <- 1/(sigx2*sigx2)
+  taux3  <- 1/(sigx3*sigx3)
+  
+  sigx1~ dunif(0,100)  
+  sigx2~ dunif(0,100)
+  sigx3~ dunif(0,100)
+  
+  tau.bx1  <- 1/(sigbx*sigbx)
+  tau.bx2  <- 1/(sigby*sigby)
+  tau.bx3  <- 1/(sigbz*sigbz)
+  sigbx~ dunif(0,100)
+  sigby~ dunif(0,100)
+  sigbz~ dunif(0,100)
+  alphay~dnorm(0,0.0001)
+  alphaz~dnorm(0,0.0001)
+  }
+"
+  
+  jags_fit <- run.jags(model = modelstring,
+                       data = jags_data,
+                       monitor = c("betax", "betay", "betaz"),
+                       n.chains = 3, burnin = 1000, sample = 2000, adapt = 1000,
+                       summarise = FALSE, method = "rjags")
+  
+  samples <- as.matrix(as.mcmc(jags_fit))
+  betax_mean <- colMeans(samples[, grepl("betax", colnames(samples))])
+  
+  mux_test <- X_test %*% betax_mean
+  mse <- mean((test_df$mri_z_mu_0 - mux_test)^2)
+
+  cv_results[[k]] <- list(mse = mse)
+}
+
+# Calcular promedio de MSE en CV
+mse_vals <- map_dbl(cv_results, "mse")
+cat("MSE en validación cruzada (promedio):", mean(mse_vals), "\n")
+
+# Entrenar en todo el dataset y calcular mse_all
+fit_all <- glm(mri_z_mu_1 ~ Mutationtype2 + DIAN_EYO * apoe2 + gender + CDRSUM, data = df, x = TRUE)
+X_all <- model.matrix(fit_all)
+N_all <- nrow(df)
+I_all <- length(unique(df$id))
+ind_all <- as.numeric(as.factor(df$id))
+
+jags_data_all <- list(
+  X = X_all,
+  x = df$mri_z_mu_0,
+  y = df$mri_z_mu_1,
+  z = df$mri_z_mu_2,
+  ind = ind_all,
+  I = I_all,
+  N = N_all,
+  mu.x1 = rep(0, ncol(X_all)),
+  mu.x2 = rep(0, ncol(X_all)),
+  mu.x3 = rep(0, ncol(X_all)),
+  tau.x1 = diag(0.0001, ncol(X_all)),
+  tau.x2 = diag(0.0001, ncol(X_all)),
+  tau.x3 = diag(0.0001, ncol(X_all))
+)
+
+jags_fit_all <- run.jags(model = modelstring,
+                         data = jags_data_all,
+                         monitor = c("betax"),
+                         n.chains = 3, burnin = 1000, sample = 2000, adapt = 1000,
+                         summarise = FALSE, method = "rjags")
+
+samples_all <- as.matrix(as.mcmc(jags_fit_all))
+betax_mean_all <- colMeans(samples_all[, grepl("betax", colnames(samples_all))])
+mux_all <- X_all %*% betax_mean_all
+mse_all <- mean((df$mri_z_mu_0 - mux_all)^2)
+
+cat("MSE en todo el conjunto (entrenamiento):", mse_all, "\n")
+
+# Convertir los resultados a data.frame
+mse_frame <- data.frame(
+  Fold = paste0("Fold_", 1:K),
+  MSE = mse_vals
+)
+# Añadir el promedio
+mse_frame <- rbind(mse_frame, data.frame(Fold = "Average", MSE = mean(mse_vals)))
+
+# Guardar en Excel
+write.xlsx(mse_frame, file = "ResultadosLuna/resultados_validacion_cruzada.xlsx", overwrite = TRUE)
+```
+MSE en validación cruzada (promedio): 1.962167 
+MSE en todo el conjunto (entrenamiento): 1.597864 
+
+# LEAVE ONE INDIVIDUAL OUT MODELO MODIFICADO 3 LATENTES
+```{r}
+# Inicialización
+loio_results <- list()
+subject_ids <- unique(df$id)
+
+for (i in seq_along(subject_ids)) {
+  cat("LOO para id:", subject_ids[i], "\n")
+  
+  # Separar sujeto test y entrenamiento
+  test_id <- subject_ids[i]
+  train_df <- df %>% filter(id != test_id)
+  test_df  <- df %>% filter(id == test_id)
+  
+  # Ajustar modelo GLM para obtener X
+  fit_train <- glm(mri_z_mu_1 ~ Mutationtype2 + DIAN_EYO + apoe2 + gender + CDRSUM, 
+                   data = train_df, x = TRUE)
+  
+  X_train <- model.matrix(fit_train)
+  X_test  <- model.matrix(formula(fit_train), data = test_df)
+  
+  # Datos para JAGS
+  N_train <- nrow(train_df)
+  I_train <- length(unique(train_df$id))
+  ind_train <- as.numeric(as.factor(train_df$id))
+  p <- ncol(X_train)
+
+  jags_data <- list(
+    X = X_train,
+    x = train_df$mri_z_mu_0,
+    y = train_df$mri_z_mu_1,
+    z = train_df$mri_z_mu_2,
+    ind = ind_train,
+    I = I_train,
+    N = N_train,
+    mu.x1 = rep(0, p),
+    mu.x2 = rep(0, p),
+    mu.x3 = rep(0, p),
+    tau.x1 = diag(0.0001, p),
+    tau.x2 = diag(0.0001, p),
+    tau.x3 = diag(0.0001, p)
+  )
+
+  # Ajuste con run.jags
+  jags_fit <- run.jags(model = modelstring,
+                       data = jags_data,
+                       monitor = c("betax"),
+                       n.chains = 3, burnin = 1000, sample = 2000, adapt = 1000,
+                       summarise = FALSE, method = "rjags")
+
+  samples <- as.matrix(as.mcmc(jags_fit))
+  betax_mean <- colMeans(samples[, grepl("betax", colnames(samples))])
+  
+  # Predicción y MSE
+  mux_test <- X_test %*% betax_mean
+  mse <- mean((test_df$mri_z_mu_0 - mux_test)^2)
+  
+  # Guardar resultado individual
+  loio_results[[i]] <- list(id = test_id, mse = mse)
+}
+
+# Resultado agregado
+mse_loio <- purrr::map_dbl(loio_results, "mse")
+cat("MSE Leave-One-Individual-Out (promedio):", mean(mse_loio), "\n")
+
+# Crear dataframe de resultados
+mse_df <- tibble(
+  id = subject_ids,
+  mse = mse_loio
+)
+
+# Visualizar distribución del MSE
+ggplot(mse_df, aes(x = mse)) +
+  geom_histogram(bins = 30, fill = "steelblue", color = "black") +
+  labs(title = "Distribución del MSE por sujeto (LOIO)",
+       x = "MSE", y = "Frecuencia") +
+  theme_minimal()
+
+# Sujetos con mayor error
+top_mse <- mse_df %>% arrange(desc(mse)) %>% head(5)
+print(top_mse)
+
+# Guardar resultados
+# Instala si no tienes: install.packages("openxlsx")
+library(openxlsx)
+
+# Guardar resultados LOIO en Excel
+write.xlsx(mse_df, file = "ResultadosLuna/loio_mse_results.xlsx", overwrite = TRUE)
+
+```
+
+MSE Leave-One-Individual-Out (promedio): 1.725015 
+
+
+#DESCRIPCIÓN VARIABLES
+
+```{r}
+summary(df)
+
+table(df$visit)
+table(df$gender)
+table(df$apoe2)
+table(df$Mutation2)
+table(df$Mutationtype2)
+```
+
+## GRÁFICO K FOLD
+
+```{r}
+cv <- read_excel("ResultadosLuna/resultados_validacion_cruzada.xlsx")
+
+cv_folds <- cv[cv$Fold != "Average", ]
+
+ggplot(cv_folds, aes(x = Fold, y = MSE)) +
+  geom_bar(stat = "identity", fill = "#56B4E9") +  # Azul claro seguro para daltónicos
+  geom_hline(yintercept = cv$MSE[cv$Fold == "Average"], 
+             linetype = "dashed", 
+             color = "#FF34B3",   # Fucsia brillante como en el gráfico anterior
+             size = 1.2) +        # Línea más gruesa
+  annotate("text",
+           x = length(unique(cv_folds$Fold)) / 2, 
+           y = cv$MSE[cv$Fold == "Average"],
+           label = paste("Average MSE =", round(cv$MSE[cv$Fold == "Average"], 2)),
+           color = "#FF34B3",
+           size = 5,
+           fontface = "bold",
+           vjust = -0.5) +
+  labs(x = "Fold",
+       y = "MSE") +
+  theme_minimal() +
+  theme(
+    panel.grid.major.x = element_blank(),
+    panel.grid.minor.x = element_blank(),
+    axis.ticks.x = element_blank()
+  )
+
+ggsave("ImagenesTFG/Grafico_cv.png", width = 12, height = 6, dpi = 300)
+
+```
+## GRÁFICO LOIO
+```{r}
+loio <- read_excel("ResultadosLuna/loio_mse_results.xlsx")
+
+loio_plot <- loio %>%
+  mutate(id = factor(id, levels = id))
+
+ggplot(loio_plot, aes(x = id, y = mse)) +
+  geom_bar(stat = "identity", fill = "#56B4E9") +
+  labs(x = "Id", y = "MSE") +
+  theme_minimal() +
+  theme(
+    axis.text.x = element_blank(),    # Oculta los textos del eje x
+    axis.ticks.x = element_blank(),    # Oculta las marcas del eje x
+     panel.grid.major.x = element_blank(),  # Quita la rejilla vertical principal
+    panel.grid.minor.x = element_blank()  
+  )+ geom_hline(yintercept = mean(loio_plot$mse), color = "#FF34B3", linetype = "dashed", size = 1.2) +
+  annotate("text", 
+           x = nrow(loio_plot) / 2, 
+           y = mean(loio_plot$mse), 
+           label = paste("Average MSE =", round(mean(loio_plot$mse), 2)),
+           color = "#FF34B3", 
+           size = 5,
+           fontface = "bold",
+           vjust = -0.5)
+
+ggsave("ImagenesTFG/Grafico_loio.png", width = 12, height = 6, dpi = 300)
+
+```
+
+
+
+
