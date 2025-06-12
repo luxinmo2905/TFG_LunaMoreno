@@ -919,50 +919,142 @@ print(p)
 
 
 ```{r}
+evol_all <- rbind(
+  cbind(evol_no_no_1, group = "Non-carriers"),
+  cbind(evol_4_no_1, group = "Heterozygous APOE4"),
+  cbind(evol_44_no_1, group = "Homozygous APOE4")
+)
+
+# Asegura el orden deseado en la leyenda
+evol_all$group <- factor(evol_all$group, levels = c("Non-carriers", "Heterozygous APOE4", "Homozygous APOE4"))
+
+
+colores_apoe <- c(
+  "Non-carriers"        = "#377eb8",  # Azul
+  "Heterozygous APOE4"  = "#4daf4a",  # Verde
+  "Homozygous APOE4"    = "#e41a1c"   # Rojo
+)
+
 p <- ggplot() +
-  geom_line(data = df, aes(x = DIAN_EYO, y = mri_z_mu_2, group = id)) +
-  geom_point(data = df, aes(x = DIAN_EYO, y = mri_z_mu_2)) +
-  labs(x = "Estimated years to onset") +
-  geom_ribbon(data = evol_no_no_0, aes(x = EYO, ymin = mri_mu2_low, ymax = mri_mu2_sup), alpha = 0.2, fill = "blue") +
-  geom_line(data = evol_no_no_0, aes(x = EYO, y = mri_mu2), color = "blue")+
-  geom_ribbon(data = evol_no_per2_0, aes(x = EYO, ymin = mri_mu2_low, ymax = mri_mu2_sup), alpha = 0.2, fill = "pink") +
-  geom_line(data = evol_no_per2_0, aes(x = EYO, y = mri_mu2), color = "pink")+
-  geom_ribbon(data = evol_44_per2_0, aes(x = EYO, ymin = mri_mu2_low, ymax = mri_mu2_sup), alpha = 0.2, fill = "orange") +
-  geom_line(data = evol_44_per2_0, aes(x = EYO, y = mri_mu2), color = "orange")
+  # Trayectorias individuales
+  geom_line(data = df, aes(x = DIAN_EYO, y = mri_z_mu_1, group = id), alpha = 0.4) +
+  geom_point(data = df, aes(x = DIAN_EYO, y = mri_z_mu_1), alpha = 0.4) +
+  
+  # Bandas de credibilidad y líneas de predicción
+  geom_ribbon(data = evol_all, aes(x = EYO, ymin = mri_mu1_low, ymax = mri_mu1_sup, fill = group), alpha = 0.2) +
+  geom_line(data = evol_all, aes(x = EYO, y = mri_mu1, color = group), size = 1) +
+
+  # Etiquetas
+  labs(
+    x = "Estimated years to onset",
+    y = "MRI latent dimension (μ₁)",
+    color = "APOE4 status",
+    fill = "APOE4 status"
+  ) +
+  
+  scale_color_manual(values = colores_apoe) +
+  scale_fill_manual(values = colores_apoe) +
+  theme_minimal()
+
 # Mostrar el gráfico
 print(p)
+
+
+#ggsave("ImagenesTFG/Grafico_efectoapoe4aislado_h.png", width = 12, height = 6, dpi = 300)
+```
+```{r}
+evol_all <- rbind(
+  cbind(evol_no_no_0, group = "Non-carriers"),
+  cbind(evol_4_no_0, group = "Heterozygous APOE4"),
+  cbind(evol_44_no_0, group = "Homozygous APOE4")
+)
+
+# Asegura el orden deseado en la leyenda
+evol_all$group <- factor(evol_all$group, levels = c("Non-carriers", "Heterozygous APOE4", "Homozygous APOE4"))
+
+
+colores_apoe <- c(
+  "Non-carriers"        = "#377eb8",  # Azul
+  "Heterozygous APOE4"  = "#4daf4a",  # Verde
+  "Homozygous APOE4"    = "#e41a1c"   # Rojo
+)
+
+p <- ggplot() +
+  # Trayectorias individuales
+  geom_line(data = df, aes(x = DIAN_EYO, y = mri_z_mu_1, group = id), alpha = 0.4) +
+  geom_point(data = df, aes(x = DIAN_EYO, y = mri_z_mu_1), alpha = 0.4) +
+  
+  # Bandas de credibilidad y líneas de predicción
+  geom_ribbon(data = evol_all, aes(x = EYO, ymin = mri_mu1_low, ymax = mri_mu1_sup, fill = group), alpha = 0.2) +
+  geom_line(data = evol_all, aes(x = EYO, y = mri_mu1, color = group), size = 1) +
+
+  # Etiquetas
+  labs(
+    x = "Estimated years to onset",
+    y = "MRI latent dimension (μ₁)",
+    color = "APOE4 status",
+    fill = "APOE4 status"
+  ) +
+  
+  scale_color_manual(values = colores_apoe) +
+  scale_fill_manual(values = colores_apoe) +
+  theme_minimal()
+
+# Mostrar el gráfico
+print(p)
+
+
+
+#ggsave("ImagenesTFG/Grafico_efectoapoe4aislado_m.png", width = 12, height = 6, dpi = 300)
 ```
 
-
 ```{r}
+evol_all <- rbind(
+  cbind(evol_no_app_0, group = "APP"),
+  cbind(evol_no_per1_0, group = "PSEN1"),
+  cbind(evol_no_per2_0, group = "PSEN2"),
+  cbind(evol_no_no_0, group = "No mutation")
+)
+
+# Convertir a factor con el orden que deseas en la leyenda
+evol_all$group <- factor(evol_all$group, levels = c("No mutation", "APP", "PSEN1", "PSEN2"))
+
+
+colores <- c(
+  "No mutation" = "#377eb8",  # Azul
+  "APP"         = "#e41a1c",  # Rojo
+  "PSEN1"       = "#4daf4a",  # Verde
+  "PSEN2"       = "#984ea3"   # Morado
+)
+
+
 p <- ggplot() +
-  geom_line(data = df, aes(x = DIAN_EYO, y = mri_z_mu_1, group = id)) +
-  geom_point(data = df, aes(x = DIAN_EYO, y = mri_z_mu_1)) +
-  labs(x = "Estimated years to onset") +
-  geom_ribbon(data = evol_no_per1_0, aes(x = EYO, ymin = mri_mu1_low, ymax = mri_mu1_sup), alpha = 0.2, fill = "blue") +
-  geom_line(data = evol_no_per1_0, aes(x = EYO, y = mri_mu1), color = "blue")+
-  geom_ribbon(data = evol_4_per1_0, aes(x = EYO, ymin = mri_mu1_low, ymax = mri_mu1_sup), alpha = 0.2, fill = "pink") +
-  geom_line(data = evol_4_per1_0, aes(x = EYO, y = mri_mu1), color = "pink")+
-  geom_ribbon(data = evol_44_per1_0, aes(x = EYO, ymin = mri_mu1_low, ymax = mri_mu1_sup), alpha = 0.2, fill = "orange") +
-  geom_line(data = evol_44_per1_0, aes(x = EYO, y = mri_mu1), color = "orange")
-# Mostrar el gráfico
-print(p)
-```
-```{r}
-p <- ggplot() +
-  geom_line(data = df, aes(x = DIAN_EYO, y = mri_z_mu_1, group = id)) +
-  geom_point(data = df, aes(x = DIAN_EYO, y = mri_z_mu_1)) +
-  labs(x = "Estimated years to onset") +
-  geom_ribbon(data = evol_no_per1_0, aes(x = EYO, ymin = mri_mu1_low, ymax = mri_mu1_sup), alpha = 0.2, fill = "blue") +
-  geom_line(data = evol_no_per1_0, aes(x = EYO, y = mri_mu1), color = "blue")+
-  geom_ribbon(data = evol_no_per2_0, aes(x = EYO, ymin = mri_mu1_low, ymax = mri_mu1_sup), alpha = 0.2, fill = "pink") +
-  geom_line(data = evol_no_per2_0, aes(x = EYO, y = mri_mu1), color = "pink")+
-  geom_ribbon(data = evol_no_app_0, aes(x = EYO, ymin = mri_mu1_low, ymax = mri_mu1_sup), alpha = 0.2, fill = "orange") +
-  geom_line(data = evol_no_app_0, aes(x = EYO, y = mri_mu1), color = "orange")
-# Mostrar el gráfico
+  # Trayectorias individuales
+  geom_line(data = df, aes(x = DIAN_EYO, y = mri_z_mu_1, group = id), alpha = 0.3) +
+  geom_point(data = df, aes(x = DIAN_EYO, y = mri_z_mu_1), alpha = 0.3) +
+  
+  # Bandas y líneas medias con leyenda
+  geom_ribbon(data = evol_all, aes(x = EYO, ymin = mri_mu1_low, ymax = mri_mu1_sup, fill = group), alpha = 0.18) +
+  geom_line(data = evol_all, aes(x = EYO, y = mri_mu1, color = group), size = 1) +
+
+  # Etiquetas
+  labs(
+    x = "Estimated years to onset",
+    y = "MRI latent dimension (μ₁)",
+    color = "Mutation group",
+    fill  = "Mutation group"
+  ) +
+  
+  scale_color_manual(values = colores) +
+  scale_fill_manual(values = colores) +
+  theme_minimal()
+
 print(p)
 
-ggsave("ImagenesTFG/Grafico_efectofam_m.png", width = 12, height = 6, dpi = 300)
+
+# Guardar si es necesario
+# ggsave("ImagenesTFG/Grafico_efectofam_m.png", width = 12, height = 6, dpi = 300)
+
 ```
 
 
@@ -1440,5 +1532,12 @@ ggsave("ImagenesTFG/Grafico_loio.png", width = 12, height = 6, dpi = 300)
 ```
 
 
+```{r}
+library(dplyr)
+df %>% filter(id == "2S2O28")
+df %>% filter(id == "FU9F55")
+df %>% filter(id == "M9VYFZ")
+
+```
 
 
