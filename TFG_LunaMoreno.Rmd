@@ -1056,33 +1056,53 @@ print(p)
 # ggsave("ImagenesTFG/Grafico_efectofam_m.png", width = 12, height = 6, dpi = 300)
 
 ```
-
-
-
 ```{r}
-### MRI
+evol_all <- rbind(
+  cbind(evol_no_app_1, group = "APP"),
+  cbind(evol_no_per1_1, group = "PSEN1"),
+  cbind(evol_no_per2_1, group = "PSEN2"),
+  cbind(evol_no_no_, group = "No mutation")
+)
 
-df_filtered <- df %>% 
-  filter(Mutation2 == "Mutation", gender== 0)
+# Convertir a factor con el orden que deseas en la leyenda
+evol_all$group <- factor(evol_all$group, levels = c("No mutation", "APP", "PSEN1", "PSEN2"))
 
-# Definir límites de los ejes fuera de ggplot
-x_limits <- range(df$DIAN_EYO, na.rm = TRUE)
-y_limits <- range(df$mri_z_mu_0, na.rm = TRUE)
 
-# Creación del gráfico
+colores <- c(
+  "No mutation" = "#377eb8",  # Azul
+  "APP"         = "#e41a1c",  # Rojo
+  "PSEN1"       = "#4daf4a",  # Verde
+  "PSEN2"       = "#984ea3"   # Morado
+)
+
+
 p <- ggplot() +
-  geom_line(data = df_filtered, aes(x = DIAN_EYO, y = mri_z_mu_1, group = id)) +
-  geom_point(data = df_filtered, aes(x = DIAN_EYO, y = mri_z_mu_1)) +
-  labs(x = "Estimated years to onset") +
-  ylim(y_limits) +
-  xlim(x_limits) +
-  geom_ribbon(data = evol_4_no_0, aes(x = EYO, ymin = mri_mu1_low, ymax = mri_mu1_sup), alpha = 0.2, fill = "blue") +
-  geom_line(data = evol_4_no_0, aes(x = EYO, y = mri_mu1), color = "blue")
+  # Trayectorias individuales
+  geom_line(data = df, aes(x = DIAN_EYO, y = mri_z_mu_1, group = id), alpha = 0.3) +
+  geom_point(data = df, aes(x = DIAN_EYO, y = mri_z_mu_1), alpha = 0.3) +
+  
+  # Bandas y líneas medias con leyenda
+  geom_ribbon(data = evol_all, aes(x = EYO, ymin = mri_mu1_low, ymax = mri_mu1_sup, fill = group), alpha = 0.18) +
+  geom_line(data = evol_all, aes(x = EYO, y = mri_mu1, color = group), size = 1) +
 
-# Mostrar el gráfico
+  # Etiquetas
+  labs(
+    x = "Estimated years to onset",
+    y = "MRI latent dimension (μ₁)",
+    color = "Mutation group",
+    fill  = "Mutation group"
+  ) +
+  
+  scale_color_manual(values = colores) +
+  scale_fill_manual(values = colores) +
+  theme_minimal()
+
 print(p)
-```
 
+
+# Guardar si es necesario
+# ggsave("ImagenesTFG/Grafico_efectofam_h.png", width = 12, height = 6, dpi = 300)
+```
 
 
 
