@@ -255,96 +255,95 @@ colnames(X)
 ###Variable Mutationtype2presenil1
 
 ```{r}
-#png("ImagenesTFG/betax2.png", width = 800, height = 600)
+png("ImagenesTFG/betax2.png", width = 800, height = 600)
 diagMCMC(output, "betax[2]") 
-#dev.off()
-#png("ImagenesTFG/betay2.png", width = 800, height = 600)
+dev.off()
+png("ImagenesTFG/betay2.png", width = 800, height = 600)
 diagMCMC(output, "betay[2]") 
-#dev.off()
-#png("ImagenesTFG/betaz2.png", width = 800, height = 600)
+dev.off()
+png("ImagenesTFG/betaz2.png", width = 800, height = 600)
 diagMCMC(output, "betaz[2]") 
-#dev.off()
+dev.off()
 ```
 
 
 ### Variable Mutationtype2presenil2
 ```{r}
-#png("ImagenesTFG/betax3.png", width = 800, height = 600)
+png("ImagenesTFG/betax3.png", width = 800, height = 600)
 diagMCMC(output, "betax[3]") 
-#dev.off()
-#png("ImagenesTFG/betay3.png", width = 800, height = 600)
+dev.off()
+png("ImagenesTFG/betay3.png", width = 800, height = 600)
 diagMCMC(output, "betay[3]") 
-#dev.off()
-#png("ImagenesTFG/betaz3.png", width = 800, height = 600)
+dev.off()
+png("ImagenesTFG/betaz3.png", width = 800, height = 600)
 diagMCMC(output, "betaz[3]") 
-#dev.off()
+dev.off()
 ```
 
 
 ###Variable Mutationtype2app
 ```{r}
-#png("ImagenesTFG/betax4.png", width = 800, height = 600)
+png("ImagenesTFG/betax4.png", width = 800, height = 600)
 diagMCMC(output, "betax[4]") 
-#dev.off()
-#png("ImagenesTFG/betay4.png", width = 800, height = 600)
+dev.off()
+png("ImagenesTFG/betay4.png", width = 800, height = 600)
 diagMCMC(output, "betay[4]") 
-#dev.off()
-#png("ImagenesTFG/betaz4.png", width = 800, height = 600)
+dev.off()
+png("ImagenesTFG/betaz4.png", width = 800, height = 600)
 diagMCMC(output, "betaz[4]") 
-#dev.off()
+dev.off()
 ```
 
 
 ### Variable apoe24
 ```{r}
-#png("ImagenesTFG/betax6.png", width = 800, height = 600)
+png("ImagenesTFG/betax6.png", width = 800, height = 600)
 diagMCMC(output, "betax[6]") 
-#dev.off()
-#png("ImagenesTFG/betay6.png", width = 800, height = 600)
+dev.off()
+png("ImagenesTFG/betay6.png", width = 800, height = 600)
 diagMCMC(output, "betay[6]") 
-#dev.off()
-#png("ImagenesTFG/betaz6.png", width = 800, height = 600)
+dev.off()
+png("ImagenesTFG/betaz6.png", width = 800, height = 600)
 diagMCMC(output, "betaz[6]") 
-#dev.off()
+dev.off()
 ```
 
 
 ### Variable apoe244
 ```{r}
-#png("ImagenesTFG/betax7.png", width = 800, height = 600)
-diagMCMC(output, "betax[7]") 
-#dev.off()
-#png("ImagenesTFG/betay7.png", width = 800, height = 600)
+png("ImagenesTFG/betax7.png", width = 800, height = 600)
+diagMCMC(output, "betax[7]") #dev.off()
+png("ImagenesTFG/betay7.png", width = 800, height = 600)
 diagMCMC(output, "betay[7]") 
-#dev.off()
-#png("ImagenesTFG/betaz7.png", width = 800, height = 600)
+dev.off()
+png("ImagenesTFG/betaz7.png", width = 800, height = 600)
 diagMCMC(output, "betaz[7]") 
-#dev.off()
+dev.off()
 ```
 
 ### DIAN_EYO:apoe24
 ```{r}
-#png("ImagenesTFG/betax10.png", width = 800, height = 600)
+png("ImagenesTFG/betax10.png", width = 800, height = 600)
 diagMCMC(output, "betax[10]") 
-#dev.off()
-#png("ImagenesTFG/betay10.png", width = 800, height = 600)
+dev.off()
+png("ImagenesTFG/betay10.png", width = 800, height = 600)
 diagMCMC(output, "betay[10]") 
-#dev.off()
-#png("ImagenesTFG/betaz10.png", width = 800, height = 600)
+dev.off()
+png("ImagenesTFG/betaz10.png", width = 800, height = 600)
 diagMCMC(output, "betaz[10]") 
-#dev.off()
+dev.off()
 ```
 ### DIAN_EYO:apoe244
 ```{r}
-#png("ImagenesTFG/betax11.png", width = 800, height = 600)
+png("ImagenesTFG/betax11.png", width = 800, height = 600)
 diagMCMC(output, "betax[11]") 
-#dev.off()
-#png("ImagenesTFG/betay11.png", width = 800, height = 600)
+dev.off()
+png("ImagenesTFG/betay11.png", width = 800, height = 600)
 diagMCMC(output, "betay[11]") 
-#dev.off()
-#png("ImagenesTFG/betaz11.png", width = 800, height = 600)
+dev.off()
+png("ImagenesTFG/betaz11.png", width = 800, height = 600)
 diagMCMC(output, "betaz[11]") 
-#dev.off()
+dev.off()
 ```
 
 
@@ -364,15 +363,15 @@ diagMCMC(output, "betaz[5]")
 
 ### Variable gender
 ```{r}
-#png("ImagenesTFG/betax8.png", width = 800, height = 600)
+png("ImagenesTFG/betax8.png", width = 800, height = 600)
 diagMCMC(output, "betax[8]") 
-#dev.off()
-#png("ImagenesTFG/betay8.png", width = 800, height = 600)
+dev.off()
+png("ImagenesTFG/betay8.png", width = 800, height = 600)
 diagMCMC(output, "betay[8]") 
-#dev.off()
-#png("ImagenesTFG/betaz8.png", width = 800, height = 600)
+dev.off()
+png("ImagenesTFG/betaz8.png", width = 800, height = 600)
 diagMCMC(output, "betaz[8]") 
-#dev.off()
+dev.off()
 ```
 ### Variable CDRSUM
 ```{r}
@@ -399,43 +398,43 @@ save(output, file = "latent2.rda")
 EYO <- seq(-40, 25, length.out = 200)
 
 # Función de predicción con CDRSUM añadido correctamente
-latentes <- function(gender, apoe4, apoe44, app, persenil1, persenil2, EYO) {
+latentes <- function(gender, apoe4, apoe44, app, presenil1, presenil2, EYO) {
   
   x <- unlist(output[,"betax[1]"]) + 
        unlist(output[,"betax[5]"])*EYO + 
        unlist(output[,"betax[6]"])*apoe4 + 
        unlist(output[,"betax[7]"])*apoe44 + 
-       unlist(output[,"betax[9]"])*EYO*apoe4 + 
-       unlist(output[,"betax[10]"])*EYO*apoe44 + 
+       unlist(output[,"betax[10]"])*EYO*apoe4 + 
+       unlist(output[,"betax[11]"])*EYO*apoe44 + 
        unlist(output[,"betax[4]"])*app + 
-       unlist(output[,"betax[2]"])*persenil1 + 
-       unlist(output[,"betax[3]"])*persenil2 + 
+       unlist(output[,"betax[2]"])*presenil1 + 
+       unlist(output[,"betax[3]"])*presenil2 + 
        unlist(output[,"betax[8]"])*gender + 
-       unlist(output[,"betax[11]"])
+       unlist(output[,"betax[9]"])
 
   y <- unlist(output[,"betay[1]"]) + 
        unlist(output[,"betay[5]"])*EYO + 
        unlist(output[,"betay[6]"])*apoe4 + 
        unlist(output[,"betay[7]"])*apoe44 + 
-       unlist(output[,"betay[9]"])*EYO*apoe4 + 
-       unlist(output[,"betay[10]"])*EYO*apoe44 + 
+       unlist(output[,"betay[10]"])*EYO*apoe4 + 
+       unlist(output[,"betay[11]"])*EYO*apoe44 + 
        unlist(output[,"betay[4]"])*app + 
-       unlist(output[,"betay[2]"])*persenil1 + 
-       unlist(output[,"betay[3]"])*persenil2 + 
+       unlist(output[,"betay[2]"])*presenil1 + 
+       unlist(output[,"betay[3]"])*presenil2 + 
        unlist(output[,"betay[8]"])*gender + 
-       unlist(output[,"betay[11]"])
+       unlist(output[,"betay[9]"])
 
   z <- unlist(output[,"betaz[1]"]) + 
        unlist(output[,"betaz[5]"])*EYO + 
        unlist(output[,"betaz[6]"])*apoe4 + 
        unlist(output[,"betaz[7]"])*apoe44 + 
-       unlist(output[,"betaz[9]"])*EYO*apoe4 + 
-       unlist(output[,"betaz[10]"])*EYO*apoe44 + 
+       unlist(output[,"betaz[10]"])*EYO*apoe4 + 
+       unlist(output[,"betaz[11]"])*EYO*apoe44 + 
        unlist(output[,"betaz[4]"])*app + 
-       unlist(output[,"betaz[2]"])*persenil1 + 
-       unlist(output[,"betaz[3]"])*persenil2 + 
+       unlist(output[,"betaz[2]"])*presenil1 + 
+       unlist(output[,"betaz[3]"])*presenil2 + 
        unlist(output[,"betaz[8]"])*gender + 
-       unlist(output[,"betaz[11]"])
+       unlist(output[,"betaz[9]"])
 
   lat <- data.frame(mri_mu0 = x, mri_mu1 = y, mri_mu2 = z)
 
@@ -1020,7 +1019,7 @@ p <- ggplot() +
   # Etiquetas
   labs(
     x = "Estimated years to onset",
-    y = "MRI latent dimension (μ₁)",
+    y = "MRI latent dimension ",
     color = "APOE4 status",
     fill = "APOE4 status"
   ) +
@@ -1033,7 +1032,7 @@ p <- ggplot() +
 print(p)
 
 
-#ggsave("ImagenesTFG/Grafico_efectoapoe4aislado_h.png", width = 12, height = 6, dpi = 300)
+ggsave("ImagenesTFG/Grafico_efectoapoe4aislado_h.png", width = 12, height = 6, dpi = 300)
 ```
 ```{r}
 evol_all <- rbind(
@@ -1078,7 +1077,7 @@ print(p)
 
 
 
-#ggsave("ImagenesTFG/Grafico_efectoapoe4aislado_m.png", width = 12, height = 6, dpi = 300)
+ggsave("ImagenesTFG/Grafico_efectoapoe4aislado_m.png", width = 12, height = 6, dpi = 300)
 ```
 
 ```{r}
@@ -1126,7 +1125,7 @@ print(p)
 
 
 # Guardar si es necesario
-# ggsave("ImagenesTFG/Grafico_efectofam_m.png", width = 12, height = 6, dpi = 300)
+ ggsave("ImagenesTFG/Grafico_efectofam_m.png", width = 12, height = 6, dpi = 300)
 
 ```
 ```{r}
@@ -1174,7 +1173,7 @@ print(p)
 
 
 # Guardar si es necesario
-# ggsave("ImagenesTFG/Grafico_efectofam_h.png", width = 12, height = 6, dpi = 300)
+ ggsave("ImagenesTFG/Grafico_efectofam_h.png", width = 12, height = 6, dpi = 300)
 ```
 
 
