@@ -23,6 +23,8 @@ library(readxl)
 library(runjags)
 library(tidyr)
 library(readr)
+library(tibble)
+library(patchwork)
 source("DBDA2E-utilities.R" )
 ```
 ```{r, include=FALSE}
@@ -159,22 +161,6 @@ dic_val
 
 fit <- lm(mri_z_mu_1 ~ apoe2 + Mutationtype2* DIAN_EYO + gender, data=df,x=TRUE)
 
-
-
-#variables control geneero y variable cognitiva general y ver que papel juegan la mutacion y el apoe en la evolucion de estas variables latentes
-
-#solo mutation solo apoe, solo suma e interacción
-
-#la tabla la dejamios dinal dicendoq ue se han probado más modelos que no hemos elegido y estos modelos tabla dic pequeña en el texto siempre considerando interacción son los cambios temporal de apoe y mutación
-
-#primero hablar sobre modelo, comentar pruebas de variables para ajustar variables y finalmente quedarnos con las que tienen algo que consideramos relevante para loq ue queremos estudiar
-
-#en base a eso hablamos de convergencia, comentar crterios, mezcla cadenas, shrink factor y autocorrelación. entre 0 y 0.1 consideramos modleo converge
-
-#graficas modelo evolución
-
-
-
 #------ para JAGS------
 N <- dim(df)[1]
 X <- as.matrix(cbind(model.matrix(fit))) 
@@ -250,7 +236,6 @@ dic_val
    DIC = round(dic_val, 3)
  )
 
-
 archivo <- "ResultadosLuna/resultados_modelos_DIC_3mod.xlsx"
  
 if (file.exists(archivo)) {
@@ -268,13 +253,13 @@ if (file.exists(archivo)) {
    hoja_nueva <- dic_resultado
  }
 
-
  write.xlsx(hoja_nueva, file = archivo, overwrite = TRUE)
 ```
 ## Gráficas mejor modelo
 
 ```{r}
-colnames(X)
+namesX <- colnames(X)
+namesX
 ```
 
 ###Variable apoe24
@@ -420,60 +405,51 @@ dev.off()
 ```
 
 ```{r}
-diagMCMC(output, "sigbx") 
-diagMCMC(output, "sigby") 
-diagMCMC(output, "sigbz") 
-diagMCMC(output, "alphay")
-diagMCMC(output, "alphaz")
-
 save(output, file = "latent2.rda")
-
 ```
 ## Gráficas evolución
 
 
 ```{r}
-# Secuencia de EYO para predicción
-EYO <- seq(-40, 25, length.out = 200)
+EYO <- seq(-25,25,length.out=300)
 
-# Función de predicción con CDRSUM añadido correctamente
-latentes <- function(gender, apoe4, apoe44, app, presenil1, presenil2, EYO) {
+latentes <- function(gender, apoe4, apoe44,app, presenil1, presenil2, DIAN_EYO) {
   
-  x <- unlist(output[,"betax[1]"]) + 
-       unlist(output[,"betax[5]"])*EYO + 
-       unlist(output[,"betax[6]"])*apoe4 + 
-       unlist(output[,"betax[7]"])*apoe44 + 
-       unlist(output[,"betax[10]"])*EYO*apoe4 + 
-       unlist(output[,"betax[11]"])*EYO*apoe44 + 
-       unlist(output[,"betax[4]"])*app + 
-       unlist(output[,"betax[2]"])*presenil1 + 
-       unlist(output[,"betax[3]"])*presenil2 + 
+  x <- unlist(output[,"betax[1]"]) +  
+       unlist(output[,"betax[7]"])*DIAN_EYO + 
+       unlist(output[,"betax[2]"])*apoe4 + 
+       unlist(output[,"betax[3]"])*apoe44 + 
+       unlist(output[,"betax[4]"])*presenil1 + 
+       unlist(output[,"betax[5]"])*presenil2 + 
+       unlist(output[,"betax[6]"])*app + 
        unlist(output[,"betax[8]"])*gender + 
-       unlist(output[,"betax[9]"])
+       unlist(output[,"betax[9]"])*presenil1*DIAN_EYO + 
+       unlist(output[,"betax[10]"])*presenil2*DIAN_EYO + 
+       unlist(output[,"betax[11]"])*app*DIAN_EYO
 
-  y <- unlist(output[,"betay[1]"]) + 
-       unlist(output[,"betay[5]"])*EYO + 
-       unlist(output[,"betay[6]"])*apoe4 + 
-       unlist(output[,"betay[7]"])*apoe44 + 
-       unlist(output[,"betay[10]"])*EYO*apoe4 + 
-       unlist(output[,"betay[11]"])*EYO*apoe44 + 
-       unlist(output[,"betay[4]"])*app + 
-       unlist(output[,"betay[2]"])*presenil1 + 
-       unlist(output[,"betay[3]"])*presenil2 + 
+  y <- unlist(output[,"betay[1]"]) +  
+       unlist(output[,"betay[7]"])*DIAN_EYO + 
+       unlist(output[,"betay[2]"])*apoe4 + 
+       unlist(output[,"betay[3]"])*apoe44 + 
+       unlist(output[,"betay[4]"])*presenil1 + 
+       unlist(output[,"betay[5]"])*presenil2 + 
+       unlist(output[,"betay[6]"])*app + 
        unlist(output[,"betay[8]"])*gender + 
-       unlist(output[,"betay[9]"])
+       unlist(output[,"betay[9]"])*presenil1*DIAN_EYO + 
+       unlist(output[,"betay[10]"])*presenil2*DIAN_EYO + 
+       unlist(output[,"betay[11]"])*app*DIAN_EYO
 
-  z <- unlist(output[,"betaz[1]"]) + 
-       unlist(output[,"betaz[5]"])*EYO + 
-       unlist(output[,"betaz[6]"])*apoe4 + 
-       unlist(output[,"betaz[7]"])*apoe44 + 
-       unlist(output[,"betaz[10]"])*EYO*apoe4 + 
-       unlist(output[,"betaz[11]"])*EYO*apoe44 + 
-       unlist(output[,"betaz[4]"])*app + 
-       unlist(output[,"betaz[2]"])*presenil1 + 
-       unlist(output[,"betaz[3]"])*presenil2 + 
+  z <- unlist(output[,"betaz[1]"]) +  
+       unlist(output[,"betaz[7]"])*DIAN_EYO + 
+       unlist(output[,"betaz[2]"])*apoe4 + 
+       unlist(output[,"betaz[3]"])*apoe44 + 
+       unlist(output[,"betaz[4]"])*presenil1 + 
+       unlist(output[,"betaz[5]"])*presenil2 + 
+       unlist(output[,"betaz[6]"])*app + 
        unlist(output[,"betaz[8]"])*gender + 
-       unlist(output[,"betaz[9]"])
+       unlist(output[,"betaz[9]"])*presenil1*DIAN_EYO + 
+       unlist(output[,"betaz[10]"])*presenil2*DIAN_EYO + 
+       unlist(output[,"betaz[11]"])*app*DIAN_EYO
 
   lat <- data.frame(mri_mu0 = x, mri_mu1 = y, mri_mu2 = z)
 
@@ -488,45 +464,400 @@ latentes <- function(gender, apoe4, apoe44, app, presenil1, presenil2, EYO) {
     paste0(names(lat), "_low"),
     paste0(names(lat), "_sup")
   )
-
+  
   return(res)
 }
 
-
 ```
-
 ```{r}
-simular_predictor_lineal_jags <- function(output, variable_prefix = "betax", new_data_vector, colnames_X) {
-  # output: resultado de coda.samples (objeto mcmc.list)
-  # variable_prefix: "betax", "betay" o "betaz"
-  # new_data_vector: vector numérico con los valores de la fila de diseño
-  # colnames_X: nombres de las columnas de la matriz de diseño usada en JAGS (colnames(X))
-  
-  # Convertimos output a matriz si no lo es
-  samples_mat <- as.matrix(output)
-  
-  # Extraemos las columnas relevantes de beta
-  beta_cols <- grep(paste0("^", variable_prefix, "\\["), colnames(samples_mat), value = TRUE)
-  
-  # Ordenamos por el índice dentro de betax[]
-  beta_ordered <- beta_cols[order(as.numeric(gsub(".*\\[|\\]", "", beta_cols)))]
-  
-  beta_mat <- samples_mat[, beta_ordered]
-  
-  if (length(new_data_vector) != ncol(beta_mat)) {
-    stop("La longitud del vector de predictores no coincide con la de beta.")
-  }
-  
-  # Calculamos el predictor lineal para cada simulación posterior
-  pred_lineal <- as.numeric(beta_mat %*% new_data_vector)
-  
-  return(pred_lineal)
+#------ No apoe4, no mutación, gender 0------
+
+fit <- latentes(1,0,0,1,0,0,-20) #Solo para crear el banco de datos 
+evol_no_no_0 <- data.frame(EYO = 0,t(fit))
+
+gender <- 0 
+apoe4 <- 0
+apoe44 <- 0
+app <- 0
+persenil1 <- 0
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_no_no_0[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ No apoe4, no mutacion, gender 1------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_no_no_1 <- data.frame(EYO = 0,t(fit))
+
+gender <- 1
+apoe4 <- 0
+apoe44 <- 0
+app <- 0
+persenil1 <- 0
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_no_no_1[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ apoe4, no mutacion, gender 0------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_4_no_0 <- data.frame(EYO = 0,t(fit))
+
+gender <- 0
+apoe4 <- 1
+apoe44 <- 0
+app <- 0
+persenil1 <- 0
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_4_no_0[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ apoe4, no mutacion, gender 1------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_4_no_1 <- data.frame(EYO = 0,t(fit))
+
+gender <- 1
+apoe4 <- 1
+apoe44 <- 0
+app <- 0
+persenil1 <- 0
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_4_no_1[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ apoe44, no mutacion, gender 0------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_44_no_0 <- data.frame(EYO = 0,t(fit))
+
+gender <- 0
+apoe4 <- 0
+apoe44 <- 1
+app <- 0
+persenil1 <- 0
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_44_no_0[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ apoe44, no mutacion, gender 1------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_44_no_1 <- data.frame(EYO = 0,t(fit))
+
+gender <- 1
+apoe4 <- 0
+apoe44 <- 1
+app <- 0
+persenil1 <- 0
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_44_no_1[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ No apoe4, persenil 1, gender 0------
+
+fit <- latentes(1,0,0,1,0,0,-20) #Solo para crear el banco de datos 
+evol_no_per1_0 <- data.frame(EYO = 0,t(fit))
+
+gender <- 0 
+apoe4 <- 0
+apoe44 <- 0
+app <- 0
+persenil1 <- 1
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_no_per1_0[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ No apoe4, persenil 1, gender 1------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_no_per1_1 <- data.frame(EYO = 0,t(fit))
+
+gender <- 1
+apoe4 <- 0
+apoe44 <- 0
+app <- 0
+persenil1 <- 1
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_no_per1_1[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ apoe4, persenil 1, gender 0------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_4_per1_0 <- data.frame(EYO = 0,t(fit))
+
+gender <- 0
+apoe4 <- 1
+apoe44 <- 0
+app <- 0
+persenil1 <- 1
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_4_per1_0[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ apoe4, persenil 1 gender 1------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_4_per1_1 <- data.frame(EYO = 0,t(fit))
+
+gender <- 1
+apoe4 <- 1
+apoe44 <- 0
+app <- 0
+persenil1 <- 1
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_4_per1_1[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ apoe44, persenil 1, gender 0------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_44_per1_0 <- data.frame(EYO = 0,t(fit))
+
+gender <- 0
+apoe4 <- 0
+apoe44 <- 1
+app <- 0
+persenil1 <- 1
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_44_per1_0[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ apoe44, persenil 1, gender 1------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_44_per1_1 <- data.frame(EYO = 0,t(fit))
+
+gender <- 1
+apoe4 <- 0
+apoe44 <- 1
+app <- 0
+persenil1 <- 1
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_44_per1_1[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ No apoe4, persenil2, gender 0------
+
+fit <- latentes(1,0,0,1,0,0,-20) #Solo para crear el banco de datos 
+evol_no_per2_0 <- data.frame(EYO = 0,t(fit))
+
+gender <- 0 
+apoe4 <- 0
+apoe44 <- 0
+app <- 0
+persenil1 <- 0
+persenil2 <- 1
+
+for(i in 1:length(EYO)){
+  evol_no_per2_0[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ No apoe4, persenil2, gender 1------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_no_per2_1 <- data.frame(EYO = 0,t(fit))
+
+gender <- 1
+apoe4 <- 0
+apoe44 <- 0
+app <- 0
+persenil1 <- 0
+persenil2 <- 1
+
+for(i in 1:length(EYO)){
+  evol_no_per2_1[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ apoe4, persenil2, gender 0------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_4_per2_0 <- data.frame(EYO = 0,t(fit))
+
+gender <- 0
+apoe4 <- 1
+apoe44 <- 0
+app <- 0
+persenil1 <- 0
+persenil2 <- 1
+
+for(i in 1:length(EYO)){
+  evol_4_per2_0[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ apoe4, persenil2, gender 1------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_4_per2_1 <- data.frame(EYO = 0,t(fit))
+
+gender <- 1
+apoe4 <- 1
+apoe44 <- 0
+app <- 0
+persenil1 <- 0
+persenil2 <- 1
+
+for(i in 1:length(EYO)){
+  evol_4_per2_1[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ apoe44, persenil2, gender 0------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_44_per2_0 <- data.frame(EYO = 0,t(fit))
+
+gender <- 0
+apoe4 <- 0
+apoe44 <- 1
+app <- 0
+persenil1 <- 0
+persenil2 <- 1
+
+for(i in 1:length(EYO)){
+  evol_44_per2_0[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ apoe44, persenil2, gender 1------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_44_per2_1 <- data.frame(EYO = 0,t(fit))
+
+gender <- 1
+apoe4 <- 0
+apoe44 <- 1
+app <- 0
+persenil1 <- 0
+persenil2 <- 1
+
+for(i in 1:length(EYO)){
+  evol_44_per2_1[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ No apoe4, app, gender 0------
+
+fit <- latentes(1,0,0,1,0,0,-20) #Solo para crear el banco de datos 
+evol_no_app_0 <- data.frame(EYO = 0,t(fit))
+
+gender <- 0 
+apoe4 <- 0
+apoe44 <- 0
+app <- 1
+persenil1 <- 0
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_no_app_0[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ No apoe4, app, gender 1------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_no_app_1 <- data.frame(EYO = 0,t(fit))
+
+gender <- 1
+apoe4 <- 0
+apoe44 <- 0
+app <- 1
+persenil1 <- 0
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_no_app_1[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ apoe4, app, gender 0------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_4_app_0 <- data.frame(EYO = 0,t(fit))
+
+gender <- 0
+apoe4 <- 1
+apoe44 <- 0
+app <- 1
+persenil1 <- 0
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_4_app_0[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ apoe4, app, gender 1------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_4_app_1 <- data.frame(EYO = 0,t(fit))
+
+gender <- 1
+apoe4 <- 1
+apoe44 <- 0
+app <- 1
+persenil1 <- 0
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_4_app_1[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ apoe44, app, gender 0------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_44_app_0 <- data.frame(EYO = 0,t(fit))
+
+gender <- 0
+apoe4 <- 0
+apoe44 <- 1
+app <- 1
+persenil1 <- 0
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_44_app_0[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
+}
+
+#------ apoe44, app, gender 1------
+
+fit <- latentes(1,0,0,1,0,0,-20)
+evol_44_app_1 <- data.frame(EYO = 0,t(fit))
+
+gender <- 1
+apoe4 <- 0
+apoe44 <- 1
+app <- 1
+persenil1 <- 0
+persenil2 <- 0
+
+for(i in 1:length(EYO)){
+  evol_44_app_1[i,] <- c(EYO[i],t(latentes(gender, apoe4, apoe44, app, persenil1, persenil2,EYO[i])))
 }
 ```
 
+
 ### MRI_MU0
 ```{r}
-
 # Creación del gráfico
 p <- ggplot() +
   geom_line(data = df, aes(x = DIAN_EYO, y = mri_z_mu_0, group = id)) +
@@ -551,11 +882,7 @@ p <- ggplot() +
 
 p
 
-#mean(EYOx+EYO_apoe44x+EYO_persenil1x)/mean(EYOx+EYO_persenil1x)
-#mean(EYOx+EYO_apoe44x+EYO_persenil2x)/mean(EYOx+EYO_persenil2x)
-#mean(EYOx+EYO_apoe44x+EYO_appx)/mean(EYOx+EYO_appx)
-
-#ggsave("ImagenesTFG/Grafico_mri_mu0.png", width = 12, height = 6, dpi = 300)
+ggsave("ImagenesTFG/Grafico_mri_mu0.png", width = 12, height = 6, dpi = 300)
 ```
 
 ### MRI_MU2
@@ -582,15 +909,9 @@ p <- ggplot() +
   geom_ribbon(data = evol_44_per1_0, aes(x = EYO, ymin = mri_mu2_low, ymax = mri_mu2_sup), alpha = 0.2, fill = "grey2") +
   geom_line(data = evol_44_per1_0, aes(x = EYO, y = mri_mu2), color = "grey2") 
 
-
 p
 
-
-# mean(EYOz+EYO_apoe44z+EYO_persenil1z)/mean(EYOz+EYO_persenil1z)
-# mean(EYOz+EYO_apoe44z+EYO_persenil2z)/mean(EYOz+EYO_persenil2z)
-# mean(EYOz+EYO_apoe44z+EYO_appz)/mean(EYOz+EYO_appz)
-
-#ggsave("ImagenesTFG/Grafico_mri_mu2.png", width = 12, height = 6, dpi = 300)
+ggsave("ImagenesTFG/Grafico_mri_mu2.png", width = 12, height = 6, dpi = 300)
 ```
 ### MRI_MU1
 
@@ -617,15 +938,9 @@ p <- ggplot() +
   geom_ribbon(data = evol_44_per1_0, aes(x = EYO, ymin = mri_mu1_low, ymax = mri_mu1_sup), alpha = 0.2, fill = "grey2") +
   geom_line(data = evol_44_per1_0, aes(x = EYO, y = mri_mu1), color = "grey2") 
 
-
 p
 
-
-# mean(EYOy+EYO_apoe44y+EYO_persenil1y)/mean(EYOy+EYO_persenil1y)
-# mean(EYOy+EYO_apoe44y+EYO_persenil2y)/mean(EYOy+EYO_persenil2y)
-# mean(EYOy+EYO_apoe44y+EYO_appy)/mean(EYOy+EYO_appy)
-
-#ggsave("ImagenesTFG/Grafico_mri_mu1.png", width = 12, height = 6, dpi = 300)
+ggsave("ImagenesTFG/Grafico_mri_mu1.png", width = 12, height = 6, dpi = 300)
 ```
 
 
@@ -641,20 +956,19 @@ p <- ggplot() +
 # Mostrar el gráfico
 print(p)
 
-#ggsave("ImagenesTFG/Grafico_mri_mu1.png", width = 12, height = 6, dpi = 300)
+ggsave("ImagenesTFG/Grafico_mri_mu1.png", width = 12, height = 6, dpi = 300)
 ```
 
 
 ```{r}
 evol_all <- rbind(
-  cbind(evol_no_no_1, group = "Non-carriers"),
+  cbind(evol_no_no_0, group = "Non-carriers"),
   cbind(evol_4_no_1, group = "Heterozygous APOE4"),
   cbind(evol_44_no_1, group = "Homozygous APOE4")
 )
 
 # Asegura el orden deseado en la leyenda
 evol_all$group <- factor(evol_all$group, levels = c("Non-carriers", "Heterozygous APOE4", "Homozygous APOE4"))
-
 
 colores_apoe <- c(
   "Non-carriers"        = "#377eb8",  # Azul
@@ -691,7 +1005,6 @@ p <- ggplot() +
 # Mostrar el gráfico
 print(p)
 
-
 ggsave("ImagenesTFG/Grafico_efectoapoe4aislado_h.png", width = 12, height = 6, dpi = 300)
 ```
 ```{r}
@@ -703,7 +1016,6 @@ evol_all <- rbind(
 
 # Asegura el orden deseado en la leyenda
 evol_all$group <- factor(evol_all$group, levels = c("Non-carriers", "Heterozygous APOE4", "Homozygous APOE4"))
-
 
 colores_apoe <- c(
   "Non-carriers"        = "#377eb8",  # Azul
@@ -739,8 +1051,6 @@ p <- ggplot() +
 # Mostrar el gráfico
 print(p)
 
-
-
 ggsave("ImagenesTFG/Grafico_efectoapoe4aislado_m.png", width = 12, height = 6, dpi = 300)
 ```
 
@@ -755,14 +1065,12 @@ evol_all <- rbind(
 # Convertir a factor con el orden que deseas en la leyenda
 evol_all$group <- factor(evol_all$group, levels = c("No mutation", "APP", "PSEN1", "PSEN2"))
 
-
 colores <- c(
   "No mutation" = "#377eb8",  # Azul
   "APP"         = "#e41a1c",  # Rojo
   "PSEN1"       = "#4daf4a",  # Verde
   "PSEN2"       = "#984ea3"   # Morado
 )
-
 
 p <- ggplot() +
   # Trayectorias individuales
@@ -791,10 +1099,8 @@ p <- ggplot() +
 
 print(p)
 
-
 # Guardar si es necesario
  ggsave("ImagenesTFG/Grafico_efectofam_m.png", width = 12, height = 6, dpi = 300)
-
 ```
 ```{r}
 evol_all <- rbind(
@@ -807,14 +1113,12 @@ evol_all <- rbind(
 # Convertir a factor con el orden que deseas en la leyenda
 evol_all$group <- factor(evol_all$group, levels = c("No mutation", "APP", "PSEN1", "PSEN2"))
 
-
 colores <- c(
   "No mutation" = "#377eb8",  # Azul
   "APP"         = "#e41a1c",  # Rojo
   "PSEN1"       = "#4daf4a",  # Verde
   "PSEN2"       = "#984ea3"   # Morado
 )
-
 
 p <- ggplot() +
   # Trayectorias individuales
@@ -839,10 +1143,298 @@ p <- ggplot() +
 
 print(p)
 
-
 # Guardar si es necesario
  ggsave("ImagenesTFG/Grafico_efectofam_h.png", width = 12, height = 6, dpi = 300)
 ```
+
+###Gráficas finales
+
+```{r}
+crear_grafico <- function(apoe_value, df, evol_no, evol_per1, evol_per2, evol_app) {
+  df_filtrado <- df %>% filter(apoe2 == apoe_value)
+  
+  ggplot() +
+    geom_point(data = df_filtrado, aes(x = DIAN_EYO, y = mri_z_mu_0), alpha = 0.4) +
+    geom_line(data = df_filtrado, aes(x = DIAN_EYO, y = mri_z_mu_0, group = id), alpha = 0.2) +
+    
+    geom_ribbon(data = evol_no, aes(x = EYO, ymin = mri_mu0_low, ymax = mri_mu0_sup), fill = "blue", alpha = 0.2) +
+    geom_line(data = evol_no, aes(x = EYO, y = mri_mu0), color = "blue", size = 1) +
+    
+    geom_ribbon(data = evol_per1, aes(x = EYO, ymin = mri_mu0_low, ymax = mri_mu0_sup), fill = "green", alpha = 0.2) +
+    geom_line(data = evol_per1, aes(x = EYO, y = mri_mu0), color = "green", size = 1) +
+    
+    geom_ribbon(data = evol_per2, aes(x = EYO, ymin = mri_mu0_low, ymax = mri_mu0_sup), fill = "red", alpha = 0.2) +
+    geom_line(data = evol_per2, aes(x = EYO, y = mri_mu0), color = "red", size = 1) +
+    
+    geom_ribbon(data = evol_app, aes(x = EYO, ymin = mri_mu0_low, ymax = mri_mu0_sup), fill = "orange", alpha = 0.2) +
+    geom_line(data = evol_app, aes(x = EYO, y = mri_mu0), color = "orange", size = 1) +
+    
+    labs(
+      x = "Estimated Years to Onset (EYO)",
+      y = "mri_z_mu_0",
+      title = paste( apoe_value)
+    ) + coord_cartesian(ylim = c(-6, 4))+
+    theme_minimal()
+}
+
+# Crear gráficos para cada APOE
+p_no_m  <- crear_grafico("no4", df, evol_no_no_0, evol_no_per1_0, evol_no_per2_0, evol_no_app_0)
+p_4_m   <- crear_grafico("4", df, evol_4_no_0, evol_4_per1_0, evol_4_per2_0, evol_4_app_0)
+p_44_m  <- crear_grafico("44", df, evol_44_no_0, evol_44_per1_0, evol_44_per2_0, evol_44_app_0)
+
+p_no_h  <- crear_grafico("no4", df, evol_no_no_1, evol_no_per1_1, evol_no_per2_1, evol_no_app_1)
+p_4_h   <- crear_grafico("4", df, evol_4_no_1, evol_4_per1_1, evol_4_per2_1, evol_4_app_1)
+p_44_h  <- crear_grafico("44", df, evol_44_no_1, evol_44_per1_1, evol_44_per2_1, evol_44_app_1)
+
+# Mostrar gráficos uno a uno
+# print(p_no_m)
+# print(p_4_m)
+# print(p_44_m)
+# 
+# print(p_no_h)
+# print(p_4_h)
+# print(p_44_h)
+
+leyenda_manual <- ggplot() +
+  # Puntos más juntos
+  geom_point(aes(x = 1, y = 1, color = "APP"), size = 4) +
+  geom_point(aes(x = 1.8, y = 1, color = "PSEN1"), size = 4) +
+  geom_point(aes(x = 2.6, y = 1, color = "PSEN2"), size = 4) +
+  geom_point(aes(x = 3.6, y = 1, color = "No mutation"), size = 4) +
+  
+  # Etiquetas justo debajo
+  annotate("text", x = 1, y = 0.88, label = "APP", size = 4) +
+  annotate("text", x = 1.8, y = 0.88, label = "PSEN1", size = 4) +
+  annotate("text", x = 2.6, y = 0.88, label = "PSEN2", size = 4) +
+  annotate("text", x = 3.6, y = 0.88, label = "No mutation", size = 4) +
+  
+  scale_color_manual(
+    values = c(
+      "APP" = "orange",
+      "PSEN1" = "red",
+      "PSEN2" = "green",
+      "No mutation" = "blue"
+    )
+  ) +
+  
+  coord_cartesian(xlim = c(0.5, 4.2), ylim = c(0.8, 1.1)) +
+  theme_void() +
+  theme(
+    legend.position = "none",
+    plot.margin = margin(0, 0, 0, 0)
+  )
+
+# Combinar gráficos en grid
+final_plot <- (
+  (p_no_m | p_no_h) /
+  (p_4_m  | p_4_h)  /
+  (p_44_m | p_44_h)
+) +
+  plot_annotation(
+    title = "             Male                                                     Female",
+    theme = theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5))
+  )
+
+final_plot
+# Combinar con la leyenda
+grafico_con_leyenda <- wrap_plots(final_plot, leyenda_manual, ncol = 1, heights = c(10, 1))
+
+# Forzar conversión a objeto gráfico compatible
+ggsave("ImagenesTFG/Graficofinal0.png", plot = grafico_con_leyenda, width = 15, height = 22, dpi = 300)
+```
+
+```{r}
+crear_grafico <- function(apoe_value, df, evol_no, evol_per1, evol_per2, evol_app) {
+  df_filtrado <- df %>% filter(apoe2 == apoe_value)
+  
+  ggplot() +
+    geom_point(data = df_filtrado, aes(x = DIAN_EYO, y = mri_z_mu_1), alpha = 0.4) +
+    geom_line(data = df_filtrado, aes(x = DIAN_EYO, y = mri_z_mu_1, group = id), alpha = 0.2) +
+    
+    geom_ribbon(data = evol_no, aes(x = EYO, ymin = mri_mu1_low, ymax = mri_mu1_sup), fill = "blue", alpha = 0.2) +
+    geom_line(data = evol_no, aes(x = EYO, y = mri_mu1), color = "blue", size = 1) +
+    
+    geom_ribbon(data = evol_per1, aes(x = EYO, ymin = mri_mu1_low, ymax = mri_mu1_sup), fill = "green", alpha = 0.2) +
+    geom_line(data = evol_per1, aes(x = EYO, y = mri_mu1), color = "green", size = 1) +
+    
+    geom_ribbon(data = evol_per2, aes(x = EYO, ymin = mri_mu1_low, ymax = mri_mu1_sup), fill = "red", alpha = 0.2) +
+    geom_line(data = evol_per2, aes(x = EYO, y = mri_mu1), color = "red", size = 1) +
+    
+    geom_ribbon(data = evol_app, aes(x = EYO, ymin = mri_mu1_low, ymax = mri_mu1_sup), fill = "orange", alpha = 0.2) +
+    geom_line(data = evol_app, aes(x = EYO, y = mri_mu1), color = "orange", size = 1) +
+    
+    labs(
+      x = "Estimated Years to Onset (EYO)",
+      y = "mri_z_mu_1",
+      title = paste( apoe_value)
+    ) + coord_cartesian(ylim = c(-6, 4))+
+    theme_minimal()
+}
+
+# Crear gráficos para cada APOE
+p_no_m  <- crear_grafico("no4", df, evol_no_no_0, evol_no_per1_0, evol_no_per2_0, evol_no_app_0)
+p_4_m   <- crear_grafico("4", df, evol_4_no_0, evol_4_per1_0, evol_4_per2_0, evol_4_app_0)
+p_44_m  <- crear_grafico("44", df, evol_44_no_0, evol_44_per1_0, evol_44_per2_0, evol_44_app_0)
+
+p_no_h  <- crear_grafico("no4", df, evol_no_no_1, evol_no_per1_1, evol_no_per2_1, evol_no_app_1)
+p_4_h   <- crear_grafico("4", df, evol_4_no_1, evol_4_per1_1, evol_4_per2_1, evol_4_app_1)
+p_44_h  <- crear_grafico("44", df, evol_44_no_1, evol_44_per1_1, evol_44_per2_1, evol_44_app_1)
+
+# Mostrar gráficos uno a uno
+# print(p_no_m)
+# print(p_4_m)
+# print(p_44_m)
+# 
+# print(p_no_h)
+# print(p_4_h)
+# print(p_44_h)
+
+leyenda_manual <- ggplot() +
+  # Puntos más juntos
+  geom_point(aes(x = 1, y = 1, color = "APP"), size = 4) +
+  geom_point(aes(x = 1.8, y = 1, color = "PSEN1"), size = 4) +
+  geom_point(aes(x = 2.6, y = 1, color = "PSEN2"), size = 4) +
+  geom_point(aes(x = 3.6, y = 1, color = "No mutation"), size = 4) +
+  
+  # Etiquetas justo debajo
+  annotate("text", x = 1, y = 0.88, label = "APP", size = 4) +
+  annotate("text", x = 1.8, y = 0.88, label = "PSEN1", size = 4) +
+  annotate("text", x = 2.6, y = 0.88, label = "PSEN2", size = 4) +
+  annotate("text", x = 3.6, y = 0.88, label = "No mutation", size = 4) +
+  
+  scale_color_manual(
+    values = c(
+      "APP" = "orange",
+      "PSEN1" = "red",
+      "PSEN2" = "green",
+      "No mutation" = "blue"
+    )
+  ) +
+  
+  coord_cartesian(xlim = c(0.5, 4.2), ylim = c(0.8, 1.1)) +
+  theme_void() +
+  theme(
+    legend.position = "none",
+    plot.margin = margin(0, 0, 0, 0)
+  )
+
+# Combinar gráficos en grid
+final_plot <- (
+  (p_no_m | p_no_h) /
+  (p_4_m  | p_4_h)  /
+  (p_44_m | p_44_h)
+) +
+  plot_annotation(
+    title = "             Male                                                     Female",
+    theme = theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5))
+  )
+
+final_plot
+# Combinar con la leyenda
+grafico_con_leyenda <- wrap_plots(final_plot, leyenda_manual, ncol = 1, heights = c(10, 1))
+
+# Forzar conversión a objeto gráfico compatible
+ggsave("ImagenesTFG/Graficofinal1.png", plot = grafico_con_leyenda, width = 15, height = 22, dpi = 300)
+```
+
+```{r}
+crear_grafico <- function(apoe_value, df, evol_no, evol_per1, evol_per2, evol_app) {
+  df_filtrado <- df %>% filter(apoe2 == apoe_value)
+  
+  ggplot() +
+    geom_point(data = df_filtrado, aes(x = DIAN_EYO, y = mri_z_mu_2), alpha = 0.4) +
+    geom_line(data = df_filtrado, aes(x = DIAN_EYO, y = mri_z_mu_2, group = id), alpha = 0.2) +
+    
+    geom_ribbon(data = evol_no, aes(x = EYO, ymin = mri_mu2_low, ymax = mri_mu2_sup), fill = "blue", alpha = 0.2) +
+    geom_line(data = evol_no, aes(x = EYO, y = mri_mu2), color = "blue", size = 1) +
+    
+    geom_ribbon(data = evol_per1, aes(x = EYO, ymin = mri_mu2_low, ymax = mri_mu2_sup), fill = "green", alpha = 0.2) +
+    geom_line(data = evol_per1, aes(x = EYO, y = mri_mu2), color = "green", size = 1) +
+    
+    geom_ribbon(data = evol_per2, aes(x = EYO, ymin = mri_mu2_low, ymax = mri_mu2_sup), fill = "red", alpha = 0.2) +
+    geom_line(data = evol_per2, aes(x = EYO, y = mri_mu2), color = "red", size = 1) +
+    
+    geom_ribbon(data = evol_app, aes(x = EYO, ymin = mri_mu2_low, ymax = mri_mu2_sup), fill = "orange", alpha = 0.2) +
+    geom_line(data = evol_app, aes(x = EYO, y = mri_mu2), color = "orange", size = 1) +
+    
+    labs(
+      x = "Estimated Years to Onset (EYO)",
+      y = "mri_z_mu_2",
+      title = paste( apoe_value)
+    ) + coord_cartesian(ylim = c(-6, 4))+
+    theme_minimal()
+}
+
+# Crear gráficos para cada APOE
+p_no_m  <- crear_grafico("no4", df, evol_no_no_0, evol_no_per1_0, evol_no_per2_0, evol_no_app_0)
+p_4_m   <- crear_grafico("4", df, evol_4_no_0, evol_4_per1_0, evol_4_per2_0, evol_4_app_0)
+p_44_m  <- crear_grafico("44", df, evol_44_no_0, evol_44_per1_0, evol_44_per2_0, evol_44_app_0)
+
+p_no_h  <- crear_grafico("no4", df, evol_no_no_1, evol_no_per1_1, evol_no_per2_1, evol_no_app_1)
+p_4_h   <- crear_grafico("4", df, evol_4_no_1, evol_4_per1_1, evol_4_per2_1, evol_4_app_1)
+p_44_h  <- crear_grafico("44", df, evol_44_no_1, evol_44_per1_1, evol_44_per2_1, evol_44_app_1)
+
+# Mostrar gráficos uno a uno
+# print(p_no_m)
+# print(p_4_m)
+# print(p_44_m)
+# 
+# print(p_no_h)
+# print(p_4_h)
+# print(p_44_h)
+
+leyenda_manual <- ggplot() +
+  # Puntos más juntos
+  geom_point(aes(x = 1, y = 1, color = "APP"), size = 4) +
+  geom_point(aes(x = 1.8, y = 1, color = "PSEN1"), size = 4) +
+  geom_point(aes(x = 2.6, y = 1, color = "PSEN2"), size = 4) +
+  geom_point(aes(x = 3.6, y = 1, color = "No mutation"), size = 4) +
+  
+  # Etiquetas justo debajo
+  annotate("text", x = 1, y = 0.88, label = "APP", size = 4) +
+  annotate("text", x = 1.8, y = 0.88, label = "PSEN1", size = 4) +
+  annotate("text", x = 2.6, y = 0.88, label = "PSEN2", size = 4) +
+  annotate("text", x = 3.6, y = 0.88, label = "No mutation", size = 4) +
+  
+  scale_color_manual(
+    values = c(
+      "APP" = "orange",
+      "PSEN1" = "red",
+      "PSEN2" = "green",
+      "No mutation" = "blue"
+    )
+  ) +
+  
+  coord_cartesian(xlim = c(0.5, 4.2), ylim = c(0.8, 1.1)) +
+  theme_void() +
+  theme(
+    legend.position = "none",
+    plot.margin = margin(0, 0, 0, 0)
+  )
+
+# Combinar gráficos en grid
+final_plot <- (
+  (p_no_m | p_no_h) /
+  (p_4_m  | p_4_h)  /
+  (p_44_m | p_44_h)
+) +
+  plot_annotation(
+    title = "             Male                                                     Female",
+    theme = theme(plot.title = element_text(size = 14, face = "bold", hjust = 0.5))
+  )
+
+final_plot
+# Combinar con la leyenda
+grafico_con_leyenda <- wrap_plots(final_plot, leyenda_manual, ncol = 1, heights = c(10, 1))
+
+# Forzar conversión a objeto gráfico compatible
+ggsave("ImagenesTFG/Graficofinal2.png", plot = grafico_con_leyenda, width = 15, height = 22, dpi = 300)
+```
+
+
+
+
+
 
 
 
@@ -872,7 +1464,6 @@ for (k in 1:K) {
   X_train <- as.matrix(model.matrix(fit_train))
   X_test <- model.matrix(formula(fit_train), data = test_df)
 
-  
   N_train <- nrow(train_df)
   I_train <- length(unique(train_df$id))
   ind_train <- as.numeric(as.factor(train_df$id))
@@ -994,7 +1585,6 @@ for (k in 1:K) {
   X_train <- as.matrix(model.matrix(fit_train))
   X_test <- model.matrix(formula(fit_train), data = test_df)
 
-  
   N_train <- nrow(train_df)
   I_train <- length(unique(train_df$id))
   ind_train <- as.numeric(as.factor(train_df$id))
@@ -1119,9 +1709,6 @@ mse_frame <- rbind(mse_frame, data.frame(Fold = "Average", MSE = mean(mse_vals))
 # Guardar en Excel
 write.xlsx(mse_frame, file = "ResultadosLuna/resultados_validacion_cruzada.xlsx", overwrite = TRUE)
 ```
-MSE en validación cruzada (promedio): 1.962167 
-MSE en todo el conjunto (entrenamiento): 1.597864 
-
 # LEAVE ONE INDIVIDUAL OUT MODELO MODIFICADO 3 LATENTES
 ```{r}
 # Inicialización
@@ -1210,11 +1797,7 @@ library(openxlsx)
 
 # Guardar resultados LOIO en Excel
 write.xlsx(mse_df, file = "ResultadosLuna/loio_mse_results.xlsx", overwrite = TRUE)
-
 ```
-
-MSE Leave-One-Individual-Out (promedio): 1.725015 
-
 
 #DESCRIPCIÓN VARIABLES
 
@@ -1259,7 +1842,6 @@ ggplot(cv_folds, aes(x = Fold, y = MSE)) +
   )
 
 ggsave("ImagenesTFG/Grafico_cv.png", width = 12, height = 6, dpi = 300)
-
 ```
 ## GRÁFICO LOIO
 ```{r}
@@ -1288,16 +1870,4 @@ ggplot(loio_plot, aes(x = id, y = mse)) +
            vjust = -0.5)
 
 ggsave("ImagenesTFG/Grafico_loio.png", width = 12, height = 6, dpi = 300)
-
 ```
-
-
-```{r}
-library(dplyr)
-df %>% filter(id == "2S2O28")
-df %>% filter(id == "FU9F55")
-df %>% filter(id == "M9VYFZ")
-
-```
-
-
