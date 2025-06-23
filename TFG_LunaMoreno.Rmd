@@ -145,7 +145,7 @@ dic_val
 ## MODELO MODIFICADO 3 LATENTES 
 
 ```{r}
-#fit <- glm(mri_z_mu_1 ~ Mutationtype2 * (DIAN_EYO + gender) + cdrglob, data=df)
+#fit <- glm(mri_z_mu_1 ~ Mutationtype2 + DIAN_EYO * apoe2 + VISITAGEc , data=df)
 
 #fit <-glm(mri_z_mu_1 ~ (apoe2) * DIAN_EYO + gender , data=df, x = TRUE)
 
@@ -157,9 +157,9 @@ dic_val
 
 #fit <- lm(mri_z_mu_1 ~ Mutationtype2+ apoe2* DIAN_EYO + gender, data=df, x = TRUE)
 
-#fit <- lm(mri_z_mu_1 ~ (Mutationtype2 + apoe2)+ (DIAN_EYO) + gender, data=df, x = TRUE)
+fit <- lm(mri_z_mu_1 ~ (Mutationtype2 + apoe2)+ (DIAN_EYO) + gender, data=df, x = TRUE)
 
-fit <- lm(mri_z_mu_1 ~ apoe2 + Mutationtype2* DIAN_EYO + gender, data=df,x=TRUE)
+#fit <- lm(mri_z_mu_1 ~ apoe2 + Mutationtype2 * DIAN_EYO + gender, data=df,x=TRUE)
 
 #------ para JAGS------
 N <- dim(df)[1]
@@ -386,9 +386,15 @@ dev.off()
 
 ### Intercept
 ```{r}
+png("ImagenesTFG/betax1.png", width = 800, height = 600)
 diagMCMC(output, "betax[1]") 
+dev.off()
+png("ImagenesTFG/betay1.png", width = 800, height = 600)
 diagMCMC(output, "betay[1]") 
+dev.off()
+png("ImagenesTFG/betaz1.png", width = 800, height = 600)
 diagMCMC(output, "betaz[1]")
+dev.off()
 ```
 
 ### Variable gender
@@ -407,6 +413,28 @@ dev.off()
 ```{r}
 save(output, file = "latent2.rda")
 ```
+
+```{r}
+
+samples_matrix <- as.matrix(output)
+
+# Calcular resumen para cada parámetro
+summary_stats <- data.frame(
+  Mean = colMeans(samples_matrix),
+  SD = apply(samples_matrix, 2, sd),
+  `2.5%` = apply(samples_matrix, 2, quantile, probs = 0.025),
+  `97.5%` = apply(samples_matrix, 2, quantile, probs = 0.975)
+)
+
+print(summary_stats)
+
+write.xlsx(summary_stats, file = "ResultadosLuna/resumen_posterior.xlsx", rowNames = TRUE)
+
+
+
+```
+
+
 ## Gráficas evolución
 
 
@@ -1605,20 +1633,18 @@ for (k in 1:K) {
   tau.x3 = diag(0.0001, ncol(X_train))
 )
 
- modelstring="
+modelstring="
   model {
     for (i in 1:N) {
       x[i]~dnorm(mux[i],taux1)
-      mux[i] <- inprod(betax[],X[i,]) + bx1[ind[i]]
+      mux[i] <- inprod(betax[],X[i,]) + b[ind[i]]
       y[i]~dnorm(muy[i],taux2)
-      muy[i] <- inprod(betay[],X[i,]) + alphay*bx2[ind[i]]
+      muy[i] <- inprod(betay[],X[i,]) + alphay*b[ind[i]]
       z[i]~dnorm(muz[i],taux3)
-      muz[i] <- inprod(betaz[],X[i,]) + alphaz*bx3[ind[i]]
+      muz[i] <- inprod(betaz[],X[i,]) + alphaz*b[ind[i]]
     }
     for(j in 1:I){
-  bx1[j] ~ dnorm(0,tau.bx1)
-  bx2[j] ~ dnorm(0,tau.bx2)
-  bx3[j] ~ dnorm(0,tau.bx3)
+  b[j] ~ dnorm(0,tau.b)
   }
   betax ~ dmnorm(mu.x1,tau.x1)
   betay ~ dmnorm(mu.x2,tau.x2)
@@ -1632,12 +1658,9 @@ for (k in 1:K) {
   sigx2~ dunif(0,100)
   sigx3~ dunif(0,100)
   
-  tau.bx1  <- 1/(sigbx*sigbx)
-  tau.bx2  <- 1/(sigby*sigby)
-  tau.bx3  <- 1/(sigbz*sigbz)
-  sigbx~ dunif(0,100)
-  sigby~ dunif(0,100)
-  sigbz~ dunif(0,100)
+  tau.b <- 1/(sigb*sigb)
+  
+  sigb~ dunif(0,100)
   alphay~dnorm(0,0.0001)
   alphaz~dnorm(0,0.0001)
   }
@@ -1663,7 +1686,7 @@ mse_vals <- map_dbl(cv_results, "mse")
 cat("MSE en validación cruzada (promedio):", mean(mse_vals), "\n")
 
 # Entrenar en todo el dataset y calcular mse_all
-fit_all <- glm(mri_z_mu_1 ~ Mutationtype2 + DIAN_EYO * apoe2 + gender + CDRSUM, data = df, x = TRUE)
+fit_all <- glm(mri_z_mu_1 ~ apoe2 + Mutationtype2* DIAN_EYO + gender, data = df, x = TRUE)
 X_all <- model.matrix(fit_all)
 N_all <- nrow(df)
 I_all <- length(unique(df$id))
@@ -1709,6 +1732,9 @@ mse_frame <- rbind(mse_frame, data.frame(Fold = "Average", MSE = mean(mse_vals))
 # Guardar en Excel
 write.xlsx(mse_frame, file = "ResultadosLuna/resultados_validacion_cruzada.xlsx", overwrite = TRUE)
 ```
+MSE en validación cruzada (promedio): 2.076081 
+MSE en todo el conjunto (entrenamiento): 1.574124 
+
 # LEAVE ONE INDIVIDUAL OUT MODELO MODIFICADO 3 LATENTES
 ```{r}
 # Inicialización
