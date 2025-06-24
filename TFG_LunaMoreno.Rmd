@@ -145,7 +145,7 @@ dic_val
 ## MODELO MODIFICADO 3 LATENTES 
 
 ```{r}
-#fit <- glm(mri_z_mu_1 ~ Mutationtype2 + DIAN_EYO * apoe2 + VISITAGEc , data=df)
+#fit <- glm(mri_z_mu_1 ~ Mutationtype2 +DIAN_EYO + gender + apoe2 + VISITAGEc , data=df,x = TRUE)
 
 #fit <-glm(mri_z_mu_1 ~ (apoe2) * DIAN_EYO + gender , data=df, x = TRUE)
 
@@ -155,11 +155,11 @@ dic_val
 
 #fit <-glm(mri_z_mu_1 ~ (Mutationtype2*apoe2) * DIAN_EYO + gender , data=df,x = TRUE)
 
-#fit <- lm(mri_z_mu_1 ~ Mutationtype2+ apoe2* DIAN_EYO + gender, data=df, x = TRUE)
+#fit <- glm(mri_z_mu_1 ~ Mutationtype2+ apoe2* DIAN_EYO + gender, data=df, x = TRUE)
 
-fit <- lm(mri_z_mu_1 ~ (Mutationtype2 + apoe2)+ (DIAN_EYO) + gender, data=df, x = TRUE)
+#fit <- lm(mri_z_mu_1 ~ Mutationtype2 + apoe2+ DIAN_EYO + gender, data=df, x = TRUE)
 
-#fit <- lm(mri_z_mu_1 ~ apoe2 + Mutationtype2 * DIAN_EYO + gender, data=df,x=TRUE)
+fit <- glm(mri_z_mu_1 ~ apoe2 + Mutationtype2 * DIAN_EYO + gender, data=df,x=TRUE)
 
 #------ para JAGS------
 N <- dim(df)[1]
@@ -253,7 +253,7 @@ if (file.exists(archivo)) {
    hoja_nueva <- dic_resultado
  }
 
- write.xlsx(hoja_nueva, file = archivo, overwrite = TRUE)
+ #qwrite.xlsx(hoja_nueva, file = archivo, overwrite = TRUE)
 ```
 ## Gráficas mejor modelo
 
@@ -1897,3 +1897,56 @@ ggplot(loio_plot, aes(x = id, y = mse)) +
 
 ggsave("ImagenesTFG/Grafico_loio.png", width = 12, height = 6, dpi = 300)
 ```
+
+# Gráficas variables latentes
+```{r}
+# Tamaño base de la fuente aumentado
+p <- ggplot(df, aes(x = DIAN_EYO, y = mri_z_mu_0, group = id)) +
+  geom_line() +
+  geom_point(alpha = 0.6) +
+  labs(
+    x = "Expected Years from Onset (EYO)",
+    y = "mri_z_mu_0"
+  ) +
+  coord_cartesian(ylim = c(-4, 4)) +
+  theme_minimal(base_size = 18)  # Aumenta tamaño base de TODAS las fuentes
+
+# Guarda con tamaño adecuado y en cm
+ggsave("ImagenesTFG/var_lat0.png", plot = p, width = 30, height = 15, units = "cm", dpi = 300)
+```
+```{r}
+# Tamaño base de la fuente aumentado
+p <- ggplot(df, aes(x = DIAN_EYO, y = mri_z_mu_1, group = id)) +
+  geom_line() +
+  geom_point(alpha = 0.6) +
+  labs(
+    x = "Expected Years from Onset (EYO)",
+    y = "mri_z_mu_1"
+  ) +
+  coord_cartesian(ylim = c(-4, 4)) +
+  theme_minimal(base_size = 18)  # Aumenta tamaño base de TODAS las fuentes
+
+# Guarda con tamaño adecuado y en cm
+ggsave("ImagenesTFG/var_lat1.png", plot = p, width = 30, height = 15, units = "cm", dpi = 300)
+```
+
+```{r}
+# Tamaño base de la fuente aumentado
+p <- ggplot(df, aes(x = DIAN_EYO, y = mri_z_mu_2, group = id)) +
+  geom_line() +
+  geom_point(alpha = 0.6) +
+  labs(
+    x = "Expected Years from Onset (EYO)",
+    y = "mri_z_mu_2"
+  ) +
+  coord_cartesian(ylim = c(-4, 4)) +
+  theme_minimal(base_size = 18)  # Aumenta tamaño base de TODAS las fuentes
+
+# Guarda con tamaño adecuado y en cm
+ggsave("ImagenesTFG/var_lat2.png", plot = p, width = 30, height = 15, units = "cm", dpi = 300)
+
+
+```
+
+
+
